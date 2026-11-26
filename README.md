@@ -25,7 +25,15 @@ python3 -m http.server 8000
 # abra http://localhost:8000
 ```
 
-O áudio usa a voz em inglês do próprio aparelho (Web Speech API). No Android, funciona melhor no Chrome.
+## Som e microfone
+
+- **Som:** todas as falas são gravações em `audio/` (voz sintética natural, geradas por `tools/make_audio.py`),
+  então o som funciona em qualquer aparelho e sem internet.
+- **Microfone:** na apresentação de cada palavra aparece um botão 🎤. A criança toca, repete a palavra e o app
+  confere com o reconhecimento de voz do navegador. Funciona no Chrome (computador ou Android), em página HTTPS
+  ou `localhost`. Onde não há reconhecimento de voz, o botão não aparece e a criança só repete em voz alta.
+  O reconhecimento erra bastante com crianças pequenas, por isso ele nunca trava a lição nem tira estrelas:
+  depois de duas tentativas o app elogia o esforço e segue.
 
 ## Instalar no Android
 
@@ -40,6 +48,7 @@ Para publicar na Play Store depois, o mesmo código pode ser empacotado com
 Tudo fica em `index.html`, na lista `UNITS`. Cada lição tem 6 `words` no formato `[inglês, figura]`
 (a figura é um emoji, uma cor com `kind:'sw'` ou um número com `kind:'num'`) e um `pt` com o tema
 falado em português ("os animais"). Prefira palavras concretas, que cabem em um desenho.
+Depois acrescente as mesmas palavras em `tools/make_audio.py` e rode o script para gravar os áudios.
 
 ## Sobre os personagens
 

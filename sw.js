@@ -1,9 +1,16 @@
 // Guarda o app no aparelho para abrir sem internet.
-const CACHE = 'turma-hello-v1';
+const CACHE = 'turma-hello-v2';
 const FILES = ['./', 'index.html', 'manifest.json', 'icon.svg'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  e.waitUntil((async () => {
+    const c = await caches.open(CACHE);
+    await c.addAll(FILES);
+    // Guarda também todas as falas gravadas, para o som funcionar sem internet.
+    const ids = await (await fetch('audio/index.json')).json();
+    await c.addAll(ids.map(id => 'audio/' + id + '.mp3'));
+    self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', e => {

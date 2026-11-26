@@ -83,6 +83,8 @@ button:focus-visible,summary:focus-visible{outline:4px solid var(--blue);outline
 .choice .pic{font-size:5rem}.choice .pic.sw{width:104px;height:104px}.choice .pic.num{font-size:4.4rem}
 .ok{background:var(--leaf)!important;animation:pop .5s}
 .bad{opacity:.3;animation:shake .35s}
+.btn.mic{--c:var(--coral);min-width:84px;min-height:84px;font-size:2.6rem}
+.btn.mic.on{animation:pulse .5s ease-in-out infinite alternate}
 .hint{animation:pulse .7s ease-in-out infinite alternate}
 @keyframes shake{25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
 @keyframes pop{0%{transform:scale(.7)}70%{transform:scale(1.1)}100%{transform:scale(1)}}
@@ -93,6 +95,7 @@ button:focus-visible,summary:focus-visible{outline:4px solid var(--blue);outline
 details{background:var(--surface);border:2px dashed var(--muted);border-radius:16px;padding:10px 14px}
 summary{font-weight:800;cursor:pointer}
 details p{margin-top:8px}
+audio{display:none}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -154,41 +157,85 @@ let store = { stars:{} };
 try { Object.assign(store, JSON.parse(localStorage.getItem('turma-hello') || '{}')); store.stars = store.stars || {}; } catch (e) {}
 const save = () => { try { localStorage.setItem('turma-hello', JSON.stringify(store)); } catch (e) {} };
 
-/* ---------- Voz: instruções em português, palavras em inglês ---------- */
-const hasVoice = 'speechSynthesis' in window;
-const voiceFor = lang => { const vs = speechSynthesis.getVoices(), p = lang.slice(0, 2);
-  return vs.find(v => v.lang.replace('_', '-') === lang) || vs.find(v => v.lang.slice(0, 2) === p); };
-// say(['en','Dog'], ['pt','Muito bem!']) fala as partes em sequência, cada uma na sua língua.
-function say(...parts) {
-  if (!hasVoice) return;
-  try {
-    speechSynthesis.cancel();
-    parts.forEach(([l, text], i) => {
-      const u = new SpeechSynthesisUtterance(text), lang = l === 'en' ? 'en-US' : 'pt-BR';
-      u.lang = lang; u.rate = l === 'en' ? 0.7 : 0.95; u.pitch = 1.15;
-      const v = voiceFor(lang); if (v) u.voice = v;
-      if (i === 0) u.onstart = () => talking(true);
-      if (i === parts.length - 1) u.onend = u.onerror = () => talking(false);
-      speechSynthesis.speak(u);
-    });
-  } catch (e) {}
+/* ---------- Som: falas gravadas (pasta audio/). Instruções em português, palavras em inglês. ---------- */
+const player = new Audio(); player.preload = 'auto';
+let playId = 0;
+const wid = w => 'w-' + w[0].replace(/ /g, '-');
+// say('yes', 'w-dog', 'p1') toca as gravações em sequência.
+function say(...ids) {
+  const my = ++playId; let i = 0;
+  const end = () => { if (my === playId) talking(false); };
+  const next = () => {
+    if (my !== playId) return;
+    if (i >= ids.length) return end();
+    player.src = 'audio/' + ids[i++] + '.mp3';
+    player.onended = next; player.onerror = next;
+    const p = player.play(); if (p) p.catch(end);
+  };
+  talking(true); next();
 }
+function hush() { playId++; try { player.pause(); } catch (e) {} talking(false); }
 const talking = on => { const a = document.querySelector('.avatar'); if (a) a.classList.toggle('talking', on); };
-if (hasVoice) { try { speechSynthesis.getVoices(); } catch (e) {} }
+
+/* ---------- Microfone: confere se a criança falou a palavra ---------- */
+// Funciona no Chrome (computador ou Android). Onde não houver, o botão do microfone não aparece.
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let dict = null, micOff = false;
+try { if (window.claude && window.claude.use) window.claude.use('dictation').then(d => { dict = d; }).catch(() => {}); } catch (e) {}
+const canListen = () => !micOff && !!(dict || SR);
+// Outras formas que o reconhecedor costuma escrever a mesma palavra.
+const ALT = { one:['1','won'], two:['2','to','too'], three:['3','tree','free'], four:['4','for'], five:['5'], six:['6','sex','sick'],
+  eye:['i','hi','aye'], ear:['year','here'], red:['read','bread'], blue:['blew','boo'], bread:['bred','red'], foot:['food','put'],
+  'teddy bear':['teddy','bear'], cow:['cal','how'], kite:['kyte','kate','kit'], ball:['bowl','bow'], car:['ka','cars'], hand:['and','hands'],
+  nose:['knows','no'], mouth:['mouse'], cat:['cut','kat'], fish:['fiche'], egg:['ag','eggs'], book:['buk','books'], pink:['pinky','ping'] };
+const heard = (text, word) => {
+  const t = ' ' + text.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ') + ' ';
+  return [word, word + 's', ...(ALT[word] || [])].some(x => t.includes(' ' + x + ' '));
+};
+// Chame direto do toque no botão. done(true|false) = falou certo ou não; done(null) = microfone indisponível.
+function listen(word, done) {
+  let text = '', finished = false, stop = () => {};
+  const finish = r => { if (finished) return; finished = true; clearTimeout(t); stop(); done(r); };
+  const check = () => { if (heard(text, word)) finish(true); };
+  const t = setTimeout(() => finish(false), 6000);
+  if (dict) {
+    let final = '';
+    const offs = [dict.onPartial(e => { text = final + ' ' + e.text; check(); }), dict.onFinal(e => { final += e.text; text = final; check(); })];
+    stop = () => { offs.forEach(f => f()); dict.stop().catch(() => {}); };
+    dict.start({ language: 'en' }).catch(e => {
+      if (e && (e.code === 'not_granted' || e.code === 'unavailable')) micOff = true;
+      finish(e && e.code === 'stopped' ? false : null);
+    });
+  } else {
+    let r;
+    try {
+      r = new SR(); r.lang = 'en-US'; r.interimResults = true; r.maxAlternatives = 5;
+      r.onresult = e => { text = [...e.results].map(x => [...x].map(a => a.transcript).join(' ')).join(' '); check(); };
+      r.onerror = e => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { micOff = true; finish(null); } else if (e.error !== 'no-speech' && e.error !== 'aborted') finish(null); };
+      r.onend = () => finish(heard(text, word));
+      stop = () => { try { r.abort(); } catch (e) {} };
+      r.start();
+    } catch (e) { micOff = true; finish(null); }
+  }
+  return () => finish(false);
+}
 
 /* ---------- Utilidades ---------- */
 const app = document.getElementById('app'), live = document.getElementById('live');
 const $ = id => document.getElementById(id);
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-const pick = a => a[Math.floor(Math.random() * a.length)];
+const praise = () => 'p' + (1 + Math.floor(Math.random() * 4));
 const starStr = n => '★'.repeat(n) + '☆'.repeat(3 - n);
 const avatar = (id, big) => `<div class="avatar${big ? ' big' : ''}" style="--c:${CH[id].color}">${CH[id].svg}</div>`;
 const pic = (u, w) => u.kind === 'sw' ? `<div class="pic sw" style="background:${w[1]}"></div>`
   : u.kind === 'num' ? `<div class="pic num">${w[1]}<span>${'●'.repeat(w[1])}</span></div>` : `<div class="pic">${w[1]}</div>`;
-let timers = [];
+let timers = [], cancelListen = null;
 const later = (fn, ms) => timers.push(setTimeout(fn, ms));
-function show(html) { timers.forEach(clearTimeout); timers = []; app.innerHTML = html; window.scrollTo(0, 0); }
-const PRAISE = ['Muito bem!', 'Isso mesmo!', 'Você acertou!', 'Que legal!'];
+function show(html) {
+  timers.forEach(clearTimeout); timers = [];
+  if (cancelListen) { const c = cancelListen; cancelListen = null; c(); }
+  app.innerHTML = html; window.scrollTo(0, 0);
+}
 
 /* ---------- Telas ---------- */
 // Primeira tela: um toque libera o som do aparelho.
@@ -199,7 +246,7 @@ function start() {
       <button class="btn huge" id="play" aria-label="Começar">▶</button>
       <p class="muted">Inglês para quem ainda não lê. Aumente o volume!</p>
     </div>`);
-  $('play').onclick = () => { home(); say(['en', 'Hello! I am Bolt!'], ['pt', 'Toque em uma figura para brincar!']); };
+  $('play').onclick = () => { home(); say('hello-bolt', 'toque'); };
 }
 
 function home() {
@@ -214,12 +261,14 @@ function home() {
         <span class="st">${starStr(store.stars[u.id] || 0)}</span>
       </button>`).join('')}</div>
     <details><summary>Para os pais</summary>
-      <p class="muted">A criança não precisa ler: o personagem fala as instruções em português e as palavras em inglês, devagar.
-      Cada lição leva uns 4 minutos e ensina 6 palavras, 3 de cada vez. Uma lição por dia é o bastante; repetir a mesma lição
-      em dias seguidos ajuda muito nessa idade. Sente junto e repita as palavras em voz alta com a criança.
-      ${hasVoice ? 'O som usa a voz do próprio aparelho: se ficar mudo, aumente o volume de mídia.' : 'Este navegador não tem voz; abra no Chrome para ouvir.'}</p>
+      <p class="muted">A criança não precisa ler: o personagem fala as instruções em português e as palavras em inglês.
+      Cada lição leva uns 5 minutos e ensina 6 palavras, 3 de cada vez. Uma lição por dia é o bastante; repetir a mesma lição
+      em dias seguidos ajuda muito nessa idade. Sente junto e repita as palavras em voz alta com a criança.</p>
+      <p class="muted">${canListen()
+        ? 'Microfone: depois de ouvir a palavra, a criança toca no 🎤 e repete. O app confere se entendeu a palavra e nunca trava a lição. O reconhecimento de voz erra bastante com crianças pequenas: use como incentivo, não como nota.'
+        : 'Microfone: para o app conferir a fala da criança, abra no navegador Chrome (computador ou Android) e permita o uso do microfone. Aqui ele não está disponível, então a criança só repete em voz alta.'}</p>
     </details>`);
-  $('hear').onclick = () => say(['en', "Hello! Let's play!"], ['pt', 'Toque em uma figura para brincar!']);
+  $('hear').onclick = () => say('lets-play', 'toque');
   app.querySelectorAll('.tile').forEach(b => b.onclick = () => lesson(UNITS.find(u => u.id === b.dataset.u)));
 }
 
@@ -233,7 +282,6 @@ function lesson(u) {
   }
   shuffle(u.words).slice(0, 4).forEach(w => steps.push({ find: w, pool: u.words, n: 4 }));
   let i = 0, miss = 0;
-  const h = CH[u.host];
   const top = () => `<div class="top"><button class="btn ghost" id="home" aria-label="Voltar ao início">🏠</button>
     <div class="bar" role="progressbar" aria-valuenow="${i}" aria-valuemax="${steps.length}"><i style="width:${i / steps.length * 100}%"></i></div>
     <button class="btn" id="hear" aria-label="Ouvir de novo">🔊</button></div>`;
@@ -241,27 +289,46 @@ function lesson(u) {
 
   function step() {
     const s = steps[i];
-    const intro = i === 0 ? [['en', `Hello! I am ${h.name}!`], ['pt', `Vamos aprender ${u.pt} em inglês!`]] : [];
+    const intro = i === 0 ? ['hello-' + u.host, 'learn-' + u.id] : [];
     if (s.teach) {
-      const w = s.teach;
+      const w = s.teach, id = wid(w), mic = canListen();
       show(`${top()}
         <div class="hero">${avatar(u.host)}<div class="bubble">${w[0]}</div></div>
         <button class="card" id="card" aria-label="Ouvir ${w[0]}">${pic(u, w)}</button>
-        <div class="row"><button class="btn go" id="next" aria-label="Próxima" hidden>➜</button></div>`);
-      const speak = () => say(...intro, ['pt', 'Escute!'], ['en', w[0]], ['en', w[0]], ['pt', 'Agora fala você!'], ['en', w[0]]);
+        <div class="row">
+          ${mic ? '<button class="btn mic" id="mic" aria-label="Falar no microfone">🎤</button>' : ''}
+          <button class="btn go" id="next" aria-label="Próxima" hidden>➜</button>
+        </div>`);
+      const speak = () => say(...intro, 'escute', id, id, mic ? 'mic' : 'fala', id);
       speak();
       const reveal = () => { $('next').hidden = false; };
-      $('card').onclick = () => { say(['en', w[0]]); reveal(); };
+      $('card').onclick = () => { say(id); if (!mic) reveal(); };
       $('hear').onclick = speak;
       $('next').onclick = next;
-      later(reveal, intro.length ? 9000 : 5000);
+      later(reveal, (mic ? 15000 : 5000) + (intro.length ? 4000 : 0));
+      if (mic) {
+        let tries = 0, busy = false;
+        $('mic').onclick = () => {
+          if (busy) return;
+          busy = true; hush(); $('mic').classList.add('on'); live.textContent = 'Ouvindo';
+          cancelListen = listen(w[0], ok => {
+            cancelListen = null; busy = false;
+            const m = $('mic'); if (!m) return;
+            m.classList.remove('on');
+            if (ok === null) { m.hidden = true; say('fala', id); return reveal(); }   // sem microfone: segue sem conferir
+            if (ok) { $('card').classList.add('ok'); m.hidden = true; live.textContent = 'Certo! ' + w[0]; say('yes', id, praise()); return reveal(); }
+            if (++tries < 2) { live.textContent = 'Tente de novo'; return say('quase', id, id); }
+            say('boa', id); reveal();
+          });
+        };
+      }
     } else {
-      const w = s.find;
+      const w = s.find, id = wid(w);
       const opts = shuffle([w, ...shuffle(s.pool.filter(x => x !== w)).slice(0, s.n - 1)]);
       show(`${top()}
         <div class="hero">${avatar(u.host)}<div class="bubble">${w[0]}?</div></div>
         <div class="choices${opts.length === 2 ? ' two' : ''}">${opts.map((o, k) => `<button class="choice" data-k="${k}" aria-label="Figura ${k + 1}">${pic(u, o)}</button>`).join('')}</div>`);
-      const ask = () => say(['pt', 'Cadê?'], ['en', w[0]]);
+      const ask = () => say('cade', id);
       ask();
       $('hear').onclick = ask;
       let locked = false, wrong = 0;
@@ -271,18 +338,18 @@ function lesson(u) {
         const o = opts[b.dataset.k];
         if (o !== w) {
           miss++; wrong++; b.classList.add('bad'); b.disabled = true;
-          say(['pt', 'Esse é'], ['en', o[0]], ['pt', 'Cadê?'], ['en', w[0]]);
+          say('esse', wid(o), 'cade', id);
           live.textContent = 'Tente outra figura';
           if (wrong >= 2) btns[opts.indexOf(w)].classList.add('hint');   // ajuda depois de dois erros
           return;
         }
         locked = true; b.classList.remove('hint'); b.classList.add('ok');
         live.textContent = 'Certo! ' + w[0];
-        say(['en', 'Yes! ' + w[0] + '!'], ['pt', pick(PRAISE)]);
-        later(next, 2600);
+        say('yes', id, praise());
+        later(next, 3200);
       });
     }
-    $('home').onclick = () => { if (hasVoice) speechSynthesis.cancel(); home(); };
+    $('home').onclick = () => { hush(); home(); };
   }
 
   function finish() {
@@ -297,9 +364,9 @@ function lesson(u) {
           <button class="btn go" id="home" aria-label="Voltar ao início">🏠</button>
         </div>
       </div>`);
-    say(['en', 'Great job!'], ['pt', `Você ganhou ${['uma estrela', 'duas estrelas', 'três estrelas'][stars - 1]}!`], ['en', 'Bye-bye!']);
+    say('great', 's' + stars, 'bye');
     $('again').onclick = () => lesson(u);
-    $('home').onclick = home;
+    $('home').onclick = () => { hush(); home(); };
   }
   step();
 }
