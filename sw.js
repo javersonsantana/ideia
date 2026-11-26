@@ -1,5 +1,5 @@
 // Guarda o app no aparelho para abrir sem internet.
-const CACHE = 'turma-hello-v3';
+const CACHE = 'turma-hello-v4';
 const FILES = ['./', 'index.html', 'manifest.json', 'icon.svg'];
 
 self.addEventListener('install', e => {

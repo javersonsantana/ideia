@@ -35,7 +35,8 @@ python3 -m http.server 8000
   confere com o reconhecimento de voz do navegador: mostra ✅ se entendeu ou 🔁 para tentar de novo.
   Funciona no Chrome (computador ou Android), em página HTTPS ou `localhost`. O reconhecimento erra bastante
   com crianças pequenas, por isso nunca trava a lição: depois de duas tentativas dá para seguir sem a estrelinha.
-- **Sem microfone:** no lugar do 🎤 aparece um ✅ para o adulto tocar quando a criança repetir a palavra.
+- **Sem microfone:** o app avisa na primeira tela que não consegue ouvir e não finge que conferiu: a criança
+  só repete em voz alta e segue, e as estrelinhas vêm de achar a figura certa.
 
 ## Instalar no Android
 

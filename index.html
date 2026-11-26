@@ -106,6 +106,8 @@ button:focus-visible,summary:focus-visible{outline:4px solid var(--blue);outline
 details{background:var(--surface);border:2px dashed var(--muted);border-radius:16px;padding:10px 14px}
 summary{font-weight:800;cursor:pointer}
 details p{margin-top:8px}
+.micst{font-weight:700;font-size:.92rem;border:2px solid var(--line);border-radius:16px;padding:10px 14px;background:var(--surface);max-width:34ch}
+.micst.yes{border-color:var(--leaf)}.micst.no{border-color:var(--coral)}
 audio{display:none}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -192,13 +194,13 @@ const talking = on => { const a = document.querySelector('.avatar'); if (a) a.cl
 // Funciona no Chrome (computador ou Android). Onde não houver, o botão do microfone não aparece.
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let dict = null, micOff = false;
-try { if (window.claude && window.claude.use) window.claude.use('dictation').then(d => { dict = d; }).catch(() => {}); } catch (e) {}
+try { if (window.claude && window.claude.use) window.claude.use('dictation').then(d => { dict = d; micStatus(); }).catch(() => {}); } catch (e) {}
 const canListen = () => !micOff && !!(dict || SR);
 // Outras formas que o reconhecedor costuma escrever a mesma palavra.
 const ALT = { one:['1','won'], two:['2','to','too'], three:['3','tree','free'], four:['4','for'], five:['5'], six:['6','sex','sick'],
-  eye:['i','hi','aye'], ear:['year','here'], red:['read','bread'], blue:['blew','boo'], bread:['bred','red'], foot:['food','put'],
-  'teddy bear':['teddy','bear'], cow:['cal','how'], kite:['kyte','kate','kit'], ball:['bowl','bow'], car:['ka','cars'], hand:['and','hands'],
-  nose:['knows','no'], mouth:['mouse'], cat:['cut','kat'], fish:['fiche'], egg:['ag','eggs'], book:['buk','books'], pink:['pinky','ping'] };
+  eye:['i','aye'], ear:['year'], red:['read'], blue:['blew'], bread:['bred'], foot:['food'],
+  'teddy bear':['teddy','bear'], cow:['cal'], kite:['kyte','kate'], ball:['bowl'], car:['ka'], hand:['hands'],
+  nose:['knows'], cat:['kat'], egg:['ag'], book:['buk'], pink:['pinky'] };
 const heard = (text, word) => {
   const t = ' ' + text.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ') + ' ';
   return [word, word + 's', ...(ALT[word] || [])].some(x => t.includes(' ' + x + ' '));
@@ -261,6 +263,15 @@ function show(html) {
   app.innerHTML = html; window.scrollTo(0, 0);
 }
 
+// Aviso para o adulto: diz com clareza se o app consegue ou não ouvir a criança aqui.
+function micStatus() {
+  const el = $('micst'); if (!el) return;
+  el.className = 'micst ' + (canListen() ? 'yes' : 'no');
+  el.textContent = canListen()
+    ? '🎤 Microfone disponível: o app ouve a criança e diz se ela falou a palavra certa.'
+    : '🚫🎤 Aqui o app não consegue ouvir a criança, então não confere a fala. Para conferir, abra no navegador Chrome (computador ou Android) e permita o microfone.';
+}
+
 /* ---------- Telas ---------- */
 // Primeira tela: um toque libera o som do aparelho.
 function start() {
@@ -269,7 +280,9 @@ function start() {
       ${avatar('bolt', true)}
       <button class="btn huge" id="play" aria-label="Começar">▶</button>
       <p class="muted">Inglês para quem ainda não lê. Aumente o volume!</p>
+      <p class="micst" id="micst"></p>
     </div>`);
+  micStatus();
   $('play').onclick = () => { home(); say('hello-bolt', 'toque'); };
 }
 
@@ -289,8 +302,8 @@ function home() {
       Cada lição leva uns 5 minutos e ensina 6 palavras, 3 de cada vez. Uma lição por dia é o bastante; repetir a mesma lição
       em dias seguidos ajuda muito nessa idade. Sente junto e repita as palavras em voz alta com a criança.</p>
       <p class="muted">Cada acerto vale uma estrelinha ⭐ com festa e parabéns. ${canListen()
-        ? 'Depois de ouvir a palavra, a criança toca no 🎤 e repete. O app mostra ✅ se entendeu a palavra, ou 🔁 para tentar de novo. O reconhecimento de voz erra bastante com crianças pequenas: use como incentivo, não como nota.'
-        : 'Aqui o microfone não está disponível, então quem confere a fala é você: quando a criança repetir a palavra, toque no ✅ para ela ganhar a estrelinha, ou no 🔁 para ouvir de novo. Para o app conferir a fala sozinho, abra no navegador Chrome (computador ou Android) e permita o microfone.'}</p>
+        ? 'Depois de ouvir a palavra, a criança toca no 🎤 e repete. O app mostra ✅ se ouviu a palavra certa, ou 🔁 para tentar de novo. O reconhecimento de voz pode errar com crianças pequenas.'
+        : 'Aqui o app não consegue usar o microfone, então não confere a fala: a criança só repete em voz alta, e as estrelinhas vêm de achar a figura certa. Para o app ouvir e dizer se ela falou certo, abra no navegador Chrome (computador ou Android) e permita o microfone.'}</p>
     </details>`);
   $('hear').onclick = () => say('lets-play', 'toque');
   app.querySelectorAll('.tile').forEach(b => b.onclick = () => lesson(UNITS.find(u => u.id === b.dataset.u)));
@@ -333,9 +346,9 @@ function lesson(u) {
         <div class="row">
           <button class="btn ghost rep" id="rep" aria-label="Ouvir de novo">🔁</button>
           ${mic ? '<button class="btn mic" id="mic" aria-label="Falar no microfone">🎤</button><button class="btn go" id="next" aria-label="Próxima" hidden>➜</button>'
-                : '<button class="btn said" id="said" aria-label="A criança falou a palavra">✅</button>'}
+                : '<button class="btn go" id="next" aria-label="Próxima" hidden>➜</button>'}
         </div>`);
-      const speak = () => say(...intro, 'escute', id, id, mic ? 'mic' : 'fala', id, ...(mic ? [] : ['verde']));
+      const speak = () => say(...intro, 'escute', id, id, mic ? 'mic' : 'fala', id);
       const again = () => say('escute', id, id);
       speak();
       $('card').onclick = () => say(id);
@@ -345,7 +358,11 @@ function lesson(u) {
       const badge = t => { const b = $('badge'); b.textContent = t; b.hidden = false; };
       const win = () => { if (done) return; done = true; $('card').classList.add('ok'); badge('✅'); reward(id); };
       if (!mic) {
-        $('said').onclick = win;   // sem microfone, quem confere é o adulto
+        // Sem microfone o app não consegue ouvir, então não finge: a criança repete e segue, sem estrelinha aqui.
+        const reveal = () => { const n = $('next'); if (n) n.hidden = false; };
+        $('next').onclick = next;
+        $('card').onclick = () => { say(id); reveal(); };
+        later(reveal, 6000 + (intro.length ? 4000 : 0));
       } else {
         let tries = 0, busy = false;
         const reveal = () => { const n = $('next'); if (n) n.hidden = false; };
@@ -358,7 +375,7 @@ function lesson(u) {
             cancelListen = null; busy = false;
             const m = $('mic'); if (!m) return;
             m.classList.remove('on');
-            if (ok === null) { micOff = true; return step(); }   // microfone indisponível: volta no modo em que o adulto confere
+            if (ok === null) { micOff = true; return step(); }   // microfone indisponível: volta no modo sem conferência
             if (ok) { m.hidden = true; $('next').hidden = true; return win(); }
             badge('🔁'); live.textContent = 'Ainda não. Tente de novo';
             if (++tries < 2) return say('quase', id, id);
