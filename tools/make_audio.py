@@ -50,6 +50,8 @@ CLIPS.update({
     "p4": ("pt", "Que legal!", 1.0),
     "p5": ("pt", "Parabéns!", 1.0),
     "p6": ("pt", "Você é demais!", 1.0),
+    "learn-hello": ("pt", "Vamos aprender a dizer olá em inglês!", 1.0),
+    "learn-phrases": ("pt", "Vamos aprender frases em inglês!", 1.0),
     "album": ("pt", "Olha quantas estrelinhas você já ganhou!", 1.0),
     "estrelinha": ("pt", "Você ganhou uma estrelinha!", 1.0),
     "s1": ("pt", "Você ganhou uma estrela!", 1.0),
@@ -65,6 +67,25 @@ CLIPS.update({
 
 # Palavras que soam igual à palavra certa: o reconhecedor pode escrever qualquer uma delas.
 SAME_SOUND = {"eye": {"i", "aye"}}
+# Frases do dia a dia: nome do áudio -> (inglês, tradução falada em português)
+PHRASES = {
+    "f-hello": ("Hello, my friend!", "Olá, meu amigo!"),
+    "f-love-you": ("I love you!", "Eu te amo!"),
+    "f-thank-you": ("Thank you!", "Obrigado!"),
+    "f-morning": ("Good morning!", "Bom dia!"),
+    "f-night": ("Good night!", "Boa noite!"),
+    "f-happy": ("I am happy!", "Eu estou feliz!"),
+    "f-dog": ("I have a dog.", "Eu tenho um cachorro."),
+    "f-car": ("My car is blue.", "Meu carro é azul."),
+    "f-grandma": ("I love my grandma.", "Eu amo minha vovó."),
+    "f-apples": ("I like apples.", "Eu gosto de maçã."),
+    "f-bird": ("I see a bird.", "Eu vejo um pássaro."),
+    "f-cat": ("My cat is orange.", "Meu gato é laranja."),
+}
+for _id, (_en, _pt) in PHRASES.items():
+    CLIPS[_id] = ("en", _en, 0.9)
+    CLIPS["m-" + _id] = ("pt", "Quer dizer: " + _pt, 1.0)
+
 DIGITS = dict(zip("0123456789", "zero one two three four five six seven eight nine".split()))
 
 def norm(t):

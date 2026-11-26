@@ -14,7 +14,9 @@ os botões são desenhos. Cada lição ensina 6 palavras em cerca de 4 minutos:
 Quando a criança erra, o app diz o nome da figura tocada e pergunta de novo; depois de dois erros,
 a figura certa pisca. No fim, a criança ganha de 1 a 3 estrelas.
 
-Lições atuais: Animals, Colors, Numbers, Food, Toys, Body.
+Lições atuais: Animals, Colors, Numbers, Food, Toys, Body (palavras) e duas lições de frases do dia a dia:
+Hello! ("Hello, my friend!", "I love you!", "Good night!"...) e I love... ("I have a dog.", "My car is blue.",
+"I love my grandma."...). Nas frases, o personagem fala em inglês e depois diz o que quer dizer em português.
 
 ## Como rodar
 
@@ -57,6 +59,8 @@ Para publicar na Play Store depois, o mesmo código pode ser empacotado com
 Tudo fica em `index.html`, na lista `UNITS`. Cada lição tem 6 `words` no formato `[inglês, figura]`
 (a figura é um emoji, uma cor com `kind:'sw'` ou um número com `kind:'num'`) e um `pt` com o tema
 falado em português ("os animais"). Prefira palavras concretas, que cabem em um desenho.
+Uma lição de frases usa `kind:'ph'` e cada item é `[inglês, figura, nome do áudio, palavras que o microfone
+precisa ouvir, tradução]`; a frase e a tradução também entram em `PHRASES` no script de áudio.
 Depois acrescente as mesmas palavras em `tools/make_audio.py` e rode o script para gravar os áudios.
 
 ## Sobre os personagens

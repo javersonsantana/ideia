@@ -72,6 +72,9 @@ button:focus-visible,summary:focus-visible{outline:4px solid var(--blue);outline
 .pic{font-size:8rem;line-height:1.1}
 .pic.sw{width:170px;height:170px;border-radius:50%;border:3px solid var(--line)}
 .pic.num{font:800 7rem/1 var(--display);color:var(--blue);display:flex;flex-direction:column;align-items:center}
+.pic.ph{font-size:5.6rem;white-space:nowrap}
+.choice .pic.ph{font-size:3.4rem}.cell .pic.ph{font-size:1.9rem}
+.bubble small{display:block;font:700 .9rem/1.3 var(--body);color:var(--muted);margin-top:2px}
 .pic.num span{font-size:.3em;letter-spacing:.12em;color:var(--coral);max-width:5.2em;text-align:center;line-height:1.1;overflow-wrap:anywhere}
 .row{display:flex;gap:14px;align-items:center;justify-content:center}
 
@@ -163,6 +166,14 @@ const CH = {
 /* ---------- Conteúdo: 6 lições, 6 palavras cada, tudo concreto e desenhável ---------- */
 // palavra: [inglês, figura]  (figura = emoji, cor CSS ou número). pt = tema falado em português.
 const UNITS = [
+  // Lições de frases (kind:'ph'): [inglês, figura, áudio, palavras que o microfone precisa ouvir, tradução]
+  { id:'hello', t:'Hello!', pt:'a dizer olá', emo:'👋', host:'bolt', c:'var(--sun)', kind:'ph', words:[
+      ['Hello, my friend!','👋🧒','f-hello',['hello','friend'],'Olá, meu amigo!'],
+      ['I love you!','❤️🤗','f-love-you',['love','you'],'Eu te amo!'],
+      ['Thank you!','🎁🙏','f-thank-you',['thank','you'],'Obrigado!'],
+      ['Good morning!','☀️','f-morning',['good','morning'],'Bom dia!'],
+      ['Good night!','🌙😴','f-night',['good','night'],'Boa noite!'],
+      ['I am happy!','😀','f-happy',['happy'],'Eu estou feliz!']]},
   { id:'animals', t:'Animals', pt:'os animais', emo:'🐶', host:'tuco', c:'var(--leaf)', words:[
       ['dog','🐶'],['cat','🐱'],['fish','🐟'],['bird','🐦'],['cow','🐮'],['lion','🦁']]},
   { id:'colors', t:'Colors', pt:'as cores', emo:'🎨', host:'luna', c:'var(--coral)', kind:'sw', words:[
@@ -174,7 +185,14 @@ const UNITS = [
   { id:'toys', t:'Toys', pt:'os brinquedos', emo:'🧸', host:'bolt', c:'var(--sun)', words:[
       ['ball','⚽'],['car','🚗'],['teddy bear','🧸'],['robot','🤖'],['book','📕'],['kite','🪁']]},
   { id:'body', t:'Body', pt:'o corpo', emo:'✋', host:'tuco', c:'var(--aqua)', words:[
-      ['eye','👁️'],['ear','👂'],['nose','👃'],['mouth','👄'],['hand','✋'],['foot','🦶']]}
+      ['eye','👁️'],['ear','👂'],['nose','👃'],['mouth','👄'],['hand','✋'],['foot','🦶']]},
+  { id:'phrases', t:'I love...', pt:'frases', emo:'❤️', host:'luna', c:'var(--coral)', kind:'ph', words:[
+      ['I have a dog.','🧒🐶','f-dog',['have','dog'],'Eu tenho um cachorro.'],
+      ['My car is blue.','🚙','f-car',['car','blue'],'Meu carro é azul.'],
+      ['I love my grandma.','❤️👵','f-grandma',['love','grandma'],'Eu amo minha vovó.'],
+      ['I like apples.','😋🍎','f-apples',['like','apple'],'Eu gosto de maçã.'],
+      ['I see a bird.','👀🐦','f-bird',['see','bird'],'Eu vejo um pássaro.'],
+      ['My cat is orange.','🐈🟠','f-cat',['cat','orange'],'Meu gato é laranja.']]}
 ];
 
 /* ---------- Progresso (fica só neste aparelho) ---------- */
@@ -191,7 +209,7 @@ const save = () => { try { localStorage.setItem('turma-hello', JSON.stringify(st
 /* ---------- Som: falas gravadas (pasta audio/). Instruções em português, palavras em inglês. ---------- */
 const player = new Audio(); player.preload = 'auto';
 let playId = 0;
-const wid = w => 'w-' + w[0].replace(/ /g, '-');
+const wid = w => w[2] || 'w-' + w[0].replace(/ /g, '-');
 // say('yes', 'w-dog', 'p1') toca as gravações em sequência.
 function say(...ids) {
   const my = ++playId; let i = 0;
@@ -217,18 +235,20 @@ const canListen = () => !micOff && !!(dict || SR);
 // Outras formas que o reconhecedor costuma escrever a mesma palavra.
 const ALT = { one:['1','won'], two:['2','to','too'], three:['3','tree','free'], four:['4','for'], five:['5'], six:['6','sex','sick'],
   eye:['i','aye'], ear:['year'], red:['read'], blue:['blew'], bread:['bred'], foot:['food'],
-  'teddy bear':['teddy','bear'], cow:['cal'], kite:['kyte','kate'], ball:['bowl'], car:['ka'], hand:['hands'],
+  'teddy bear':['teddy','bear'], grandma:['grandmother','granma','grandmom'], thank:['thanks'], friend:['friends'], cow:['cal'], kite:['kyte','kate'], ball:['bowl'], car:['ka'], hand:['hands'],
   nose:['knows'], cat:['kat'], egg:['ag'], book:['buk'], pink:['pinky'] };
+// Para uma frase, o microfone precisa ouvir todas as palavras-chave dela (w[3]).
+const heardAll = (text, w) => (w[3] || [w[0]]).every(k => heard(text, k));
 const heard = (text, word) => {
   const t = ' ' + text.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ') + ' ';
   return [word, word + 's', ...(ALT[word] || [])].some(x => t.includes(' ' + x + ' '));
 };
 // Chame direto do toque no botão. done(true|false) = falou certo ou não; done(null) = microfone indisponível.
-function listen(word, done) {
+function listen(w, done) {
   let text = '', finished = false, stop = () => {};
   const finish = r => { if (finished) return; finished = true; clearTimeout(t); stop(); done(r); };
-  const check = () => { if (heard(text, word)) finish(true); };
-  const t = setTimeout(() => finish(false), 6000);
+  const check = () => { if (heardAll(text, w)) finish(true); };
+  const t = setTimeout(() => finish(false), w[3] ? 8000 : 6000);
   if (dict) {
     let final = '';
     const offs = [dict.onPartial(e => { text = final + ' ' + e.text; check(); }), dict.onFinal(e => { final += e.text; text = final; check(); })];
@@ -243,7 +263,7 @@ function listen(word, done) {
       r = new SR(); r.lang = 'en-US'; r.interimResults = true; r.maxAlternatives = 5;
       r.onresult = e => { text = [...e.results].map(x => [...x].map(a => a.transcript).join(' ')).join(' '); check(); };
       r.onerror = e => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { micOff = true; finish(null); } else if (e.error !== 'no-speech' && e.error !== 'aborted') finish(null); };
-      r.onend = () => finish(heard(text, word));
+      r.onend = () => finish(heardAll(text, w));
       stop = () => { try { r.abort(); } catch (e) {} };
       r.start();
     } catch (e) { micOff = true; finish(null); }
@@ -272,7 +292,7 @@ function party(big) {
 const starStr = n => '★'.repeat(n) + '☆'.repeat(3 - n);
 const avatar = (id, big) => `<div class="avatar${big ? ' big' : ''}" style="--c:${CH[id].color}">${CH[id].svg}</div>`;
 const pic = (u, w) => u.kind === 'sw' ? `<div class="pic sw" style="background:${w[1]}"></div>`
-  : u.kind === 'num' ? `<div class="pic num">${w[1]}<span>${'●'.repeat(w[1])}</span></div>` : `<div class="pic">${w[1]}</div>`;
+  : u.kind === 'num' ? `<div class="pic num">${w[1]}<span>${'●'.repeat(w[1])}</span></div>` : `<div class="pic${u.kind === 'ph' ? ' ph' : ''}">${w[1]}</div>`;
 let timers = [], cancelListen = null;
 const later = (fn, ms) => timers.push(setTimeout(fn, ms));
 function show(html) {
@@ -317,7 +337,7 @@ function home() {
       </button>`).join('')}</div>
     <details><summary>Para os pais</summary>
       <p class="muted">A criança não precisa ler: o personagem fala as instruções em português e as palavras em inglês.
-      Cada lição leva uns 5 minutos e ensina 6 palavras, 3 de cada vez. Uma lição por dia é o bastante; repetir a mesma lição
+      Cada lição leva uns 5 minutos e ensina 6 palavras ou 6 frases do dia a dia, 3 de cada vez. Uma lição por dia é o bastante; repetir a mesma lição
       em dias seguidos ajuda muito nessa idade. Sente junto e repita as palavras em voz alta com a criança.</p>
       <p class="muted">Cada acerto vale uma estrelinha ⭐ com festa e parabéns. ${canListen()
         ? 'Depois de ouvir a palavra, a criança toca no 🎤 e repete. O app mostra ✅ se ouviu a palavra certa, ou 🔁 para tentar de novo, e só avança quando ela acerta. O reconhecimento de voz pode errar com crianças pequenas: depois de 5 tentativas aparece um link pequeno para o adulto pular a palavra, sem estrelinha.'
@@ -394,7 +414,7 @@ function lesson(u) {
     if (s.teach) {
       const w = s.teach, id = wid(w), mic = canListen();
       show(`${top()}
-        <div class="hero">${avatar(u.host)}<div class="bubble">${w[0]}</div></div>
+        <div class="hero">${avatar(u.host)}<div class="bubble">${w[0]}${w[4] ? `<small>${w[4]}</small>` : ''}</div></div>
         <button class="card" id="card" aria-label="Ouvir ${w[0]}">${pic(u, w)}<span class="badge" id="badge" hidden></span></button>
         <div class="row">
           <button class="btn ghost rep" id="rep" aria-label="Ouvir de novo">🔁</button>
@@ -402,7 +422,7 @@ function lesson(u) {
                 : '<button class="btn go" id="next" aria-label="Próxima" hidden>➜</button>'}
         </div>
         ${mic ? '<button class="skip" id="skip" hidden>Pular esta palavra (adulto)</button>' : ''}`);
-      const speak = () => say(...intro, 'escute', id, id, mic ? 'mic' : 'fala', id);
+      const speak = () => say(...intro, 'escute', id, id, ...(w[4] ? ['m-' + id] : []), mic ? 'mic' : 'fala', id);
       const again = () => say('escute', id, id);
       speak();
       $('card').onclick = () => say(id);
@@ -416,7 +436,7 @@ function lesson(u) {
         const reveal = () => { const n = $('next'); if (n) n.hidden = false; };
         $('next').onclick = next;
         $('card').onclick = () => { say(id); reveal(); };
-        later(reveal, 6000 + (intro.length ? 4000 : 0));
+        later(reveal, 6000 + (intro.length ? 4000 : 0) + (w[4] ? 5000 : 0));
       } else {
         // Com microfone a criança só avança quando o app ouve a palavra certa.
         let tries = 0, busy = false;
@@ -424,7 +444,7 @@ function lesson(u) {
         $('mic').onclick = () => {
           if (busy || done) return;
           busy = true; hush(); $('badge').hidden = true; $('mic').classList.add('on'); live.textContent = 'Ouvindo';
-          cancelListen = listen(w[0], ok => {
+          cancelListen = listen(w, ok => {
             cancelListen = null; busy = false;
             const m = $('mic'); if (!m) return;
             m.classList.remove('on');
@@ -440,7 +460,7 @@ function lesson(u) {
       const w = s.find, id = wid(w);
       const opts = shuffle([w, ...shuffle(s.pool.filter(x => x !== w)).slice(0, s.n - 1)]);
       show(`${top()}
-        <div class="hero">${avatar(u.host)}<div class="bubble">${w[0]}?</div></div>
+        <div class="hero">${avatar(u.host)}<div class="bubble">${u.kind === 'ph' ? w[0] : w[0] + '?'}</div></div>
         <div class="choices${opts.length === 2 ? ' two' : ''}">${opts.map((o, k) => `<button class="choice" data-k="${k}" aria-label="Figura ${k + 1}">${pic(u, o)}</button>`).join('')}</div>`);
       const ask = () => say('cade', id);
       ask();
