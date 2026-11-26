@@ -11,14 +11,14 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&display=swap">
 <style>
-/* Layout: uma coluna de celular (até 560px), blocos grandes tipo adesivo, um personagem sempre no topo de cada tela. */
+/* Layout: uma coluna de celular (até 560px). Nada depende de leitura: figura grande, voz e botões com desenho. */
 :root{
   --bg:#E4F3FF; --surface:#FFFFFF; --fg:#14213D; --muted:#51607F; --line:#14213D;
-  --sun:#FFC531; --coral:#FF6B81; --leaf:#3CCB7F; --blue:#5B8CFF; --grape:#B18CFF;
+  --sun:#FFC531; --coral:#FF6B81; --leaf:#3CCB7F; --blue:#5B8CFF; --grape:#B18CFF; --aqua:#3FD0C9;
   --on-color:#14213D;
   --display:"Baloo 2","Nunito","Trebuchet MS",system-ui,sans-serif;
   --body:"Nunito","Trebuchet MS",system-ui,sans-serif;
-  --r:22px;
+  --r:26px;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){--bg:#0E1630;--surface:#1B2750;--fg:#F2F5FF;--muted:#A9B5D6;--line:#050916;color-scheme:dark}
@@ -30,76 +30,69 @@
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 body{margin:0;background:var(--bg);color:var(--fg);font:500 17px/1.45 var(--body);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 28px}
-#app{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
-h1,h2{font-family:var(--display);font-weight:800;line-height:1.05;margin:0;text-wrap:balance}
-h1{font-size:1.9rem} h2{font-size:1.5rem}
+#app{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1{font:800 2.1rem/1.05 var(--display);margin:0;text-wrap:balance}
 p{margin:0}
 .muted{color:var(--muted);font-size:.92rem}
 
-button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
-button:focus-visible{outline:4px solid var(--blue);outline-offset:3px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:56px;padding:10px 20px;
-  background:var(--c,var(--sun));color:var(--on-color);border:3px solid var(--line);border-radius:var(--r);
-  box-shadow:0 5px 0 var(--line);font:800 1.15rem var(--display);transition:transform .08s,box-shadow .08s}
-.btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--line)}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button:focus-visible,summary:focus-visible{outline:4px solid var(--blue);outline-offset:3px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-width:68px;min-height:68px;padding:0 18px;font-size:2rem;line-height:1;
+  background:var(--c,var(--sun));color:var(--on-color);border:3px solid var(--line);border-radius:50px;
+  box-shadow:0 6px 0 var(--line);transition:transform .08s,box-shadow .08s}
+.btn:active,.tile:active,.choice:active,.card:active{transform:translateY(4px);box-shadow:0 1px 0 var(--line)}
 .btn.ghost{background:var(--surface);color:var(--fg)}
-.btn.round{min-width:56px;padding:0;border-radius:50%}
-.btn.wide{width:100%}
+.btn.go{--c:var(--leaf);min-width:140px;min-height:84px;font-size:2.6rem}
+.btn.huge{--c:var(--leaf);width:150px;height:150px;border-radius:50%;font-size:4.5rem;padding-left:28px}
 
 .top{display:flex;align-items:center;gap:12px}
-.top h1,.top h2{flex:1;min-width:0}
-.stars-total{font:800 1.1rem var(--display);background:var(--surface);border:3px solid var(--line);border-radius:999px;padding:4px 14px;white-space:nowrap}
+.top h1{flex:1;min-width:0}
+.total{font:800 1.2rem var(--display);background:var(--surface);border:3px solid var(--line);border-radius:999px;padding:4px 14px;white-space:nowrap}
+.bar{flex:1;height:22px;background:var(--surface);border:3px solid var(--line);border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--leaf);transition:width .4s}
 
-.hero{display:flex;align-items:center;gap:14px}
 .avatar{flex:none;width:96px;height:96px;border-radius:50%;background:var(--c,var(--sun));border:3px solid var(--line);box-shadow:0 5px 0 var(--line);overflow:hidden}
-.avatar.big{width:120px;height:120px}
+.avatar.big{width:170px;height:170px}
 .avatar svg{display:block;width:100%;height:100%}
-.bubble{flex:1;min-width:0;position:relative;background:var(--surface);border:3px solid var(--line);border-radius:var(--r);padding:12px 16px}
-.bubble::before{content:"";position:absolute;left:-11px;top:34px;width:16px;height:16px;background:var(--surface);border-left:3px solid var(--line);border-bottom:3px solid var(--line);transform:rotate(45deg)}
-.bubble .en{font:800 1.35rem/1.2 var(--display)}
-.bubble .pt{color:var(--muted);font-size:.95rem;margin-top:2px}
+.avatar.talking{animation:bob .5s ease-in-out infinite alternate}
+.hero{display:flex;align-items:center;gap:14px}
+.bubble{flex:1;min-width:0;position:relative;background:var(--surface);border:3px solid var(--line);border-radius:var(--r);padding:12px 16px;font:800 1.5rem/1.15 var(--display)}
+.bubble::before{content:"";position:absolute;left:-11px;top:calc(50% - 8px);width:16px;height:16px;background:var(--surface);border-left:3px solid var(--line);border-bottom:3px solid var(--line);transform:rotate(45deg)}
 
-.units{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.unit{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:14px;min-height:132px;
-  background:var(--c);color:var(--on-color);border:3px solid var(--line);border-radius:var(--r);box-shadow:0 5px 0 var(--line);transition:transform .08s,box-shadow .08s}
-.unit:active{transform:translateY(4px);box-shadow:0 1px 0 var(--line)}
-.unit .emo{font-size:2.2rem;line-height:1}
-.unit .t{font:800 1.4rem/1.1 var(--display)}
-.unit .s{font-weight:700;font-size:.9rem;opacity:.8}
-.unit .st{margin-top:auto;font-size:1.05rem;letter-spacing:2px}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:160px;padding:12px;
+  background:var(--c);color:var(--on-color);border:3px solid var(--line);border-radius:var(--r);box-shadow:0 6px 0 var(--line);transition:transform .08s,box-shadow .08s}
+.tile .emo{font-size:4rem;line-height:1.1}
+.tile .t{font:800 1.3rem/1.1 var(--display)}
+.tile .st{font-size:1.3rem;letter-spacing:3px}
 
-.acts{display:flex;flex-direction:column;gap:14px}
-.act{justify-content:flex-start;text-align:left;min-height:76px;font-size:1.3rem}
-.act .ico{font-size:1.9rem}
-.act small{display:block;font:700 .85rem var(--body);opacity:.8}
-.act .done{margin-left:auto;font-size:1.3rem}
+.card{background:var(--surface);border:3px solid var(--line);border-radius:32px;box-shadow:0 7px 0 var(--line);padding:26px 16px;min-height:300px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;transition:transform .08s,box-shadow .08s}
+.card .word{font:800 2.6rem/1.1 var(--display)}
+.pic{font-size:8rem;line-height:1.1}
+.pic.sw{width:170px;height:170px;border-radius:50%;border:3px solid var(--line)}
+.pic.num{font:800 7rem/1 var(--display);color:var(--blue);display:flex;flex-direction:column;align-items:center}
+.pic.num span{font-size:.3em;letter-spacing:.12em;color:var(--coral);max-width:5.2em;text-align:center;line-height:1.1;overflow-wrap:anywhere}
+.row{display:flex;gap:14px;align-items:center;justify-content:center}
 
-.card{background:var(--surface);border:3px solid var(--line);border-radius:28px;box-shadow:0 6px 0 var(--line);padding:22px 16px;
-  display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;width:100%}
-.card .word{font:800 2.4rem/1.1 var(--display)}
-.pic{font-size:5.5rem;line-height:1.1}
-.pic.sw{width:110px;height:110px;border-radius:50%;border:3px solid var(--line)}
-.pic.num{font:800 5.5rem/1.1 var(--display);color:var(--blue)}
-.row{display:flex;gap:12px;align-items:center}
-.row .grow{flex:1}
-.dots{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
-.dots i{width:12px;height:12px;border-radius:50%;border:2px solid var(--line);background:var(--surface)}
-.dots i.on{background:var(--leaf)}
-
-.opts{display:flex;flex-direction:column;gap:12px}
-.grid4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.choice{background:var(--surface);border:3px solid var(--line);border-radius:var(--r);box-shadow:0 5px 0 var(--line);
-  min-height:130px;display:flex;align-items:center;justify-content:center;padding:10px;transition:transform .08s,box-shadow .08s}
-.choice:active{transform:translateY(4px);box-shadow:0 1px 0 var(--line)}
-.choice .pic{font-size:4rem}.choice .pic.sw{width:84px;height:84px}.choice .pic.num{font-size:4rem}
-.ok{background:var(--leaf)!important;color:var(--on-color)!important}
-.bad{opacity:.35;animation:shake .35s}
+.choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.choices.two{grid-template-columns:1fr}
+.choice{background:var(--surface);border:3px solid var(--line);border-radius:var(--r);box-shadow:0 6px 0 var(--line);
+  min-height:160px;display:flex;align-items:center;justify-content:center;padding:10px;transition:transform .08s,box-shadow .08s}
+.choices .choice:last-child:nth-child(odd){grid-column:1/-1}
+.choice .pic{font-size:5rem}.choice .pic.sw{width:104px;height:104px}.choice .pic.num{font-size:4.4rem}
+.ok{background:var(--leaf)!important;animation:pop .5s}
+.bad{opacity:.3;animation:shake .35s}
+.hint{animation:pulse .7s ease-in-out infinite alternate}
 @keyframes shake{25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
-@keyframes pop{0%{transform:scale(.6)}70%{transform:scale(1.12)}100%{transform:scale(1)}}
-.result{align-items:center;text-align:center;gap:14px;display:flex;flex-direction:column}
-.bigstars{font-size:3.4rem;letter-spacing:6px;animation:pop .5s}
-.note{background:var(--surface);border:2px dashed var(--muted);border-radius:16px;padding:12px 14px}
-.note b{font-weight:800}
+@keyframes pop{0%{transform:scale(.7)}70%{transform:scale(1.1)}100%{transform:scale(1)}}
+@keyframes pulse{to{transform:scale(1.06);background:var(--sun)}}
+@keyframes bob{to{transform:translateY(-6px) rotate(3deg)}}
+.center{display:flex;flex-direction:column;align-items:center;text-align:center;gap:18px}
+.bigstars{font-size:4rem;letter-spacing:8px;animation:pop .6s}
+details{background:var(--surface);border:2px dashed var(--muted);border-radius:16px;padding:10px 14px}
+summary{font-weight:800;cursor:pointer}
+details p{margin-top:8px}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -110,7 +103,7 @@ button:focus-visible{outline:4px solid var(--blue);outline-offset:3px}
 <script>
 /* ---------- Personagens originais (SVG) ---------- */
 const CH = {
-  bolt: { name: 'Bolt', what: 'o robô', color: 'var(--sun)', svg: `
+  bolt: { name: 'Bolt', color: 'var(--sun)', svg: `
     <svg viewBox="0 0 120 120" aria-hidden="true"><g stroke="#14213D" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
     <line x1="60" y1="14" x2="60" y2="30" fill="none"/><circle cx="60" cy="12" r="6" fill="#FF6B81"/>
     <rect x="16" y="52" width="12" height="22" rx="5" fill="#FF6B81"/><rect x="92" y="52" width="12" height="22" rx="5" fill="#FF6B81"/>
@@ -119,7 +112,7 @@ const CH = {
     <circle cx="48" cy="58" r="4" fill="#14213D"/><circle cx="76" cy="58" r="4" fill="#14213D"/>
     <path d="M46 74 Q60 86 74 74" fill="#fff"/>
     <rect x="40" y="94" width="40" height="30" rx="8" fill="#3FD0C9"/></g></svg>` },
-  luna: { name: 'Luna', what: 'a gata astronauta', color: 'var(--grape)', svg: `
+  luna: { name: 'Luna', color: 'var(--grape)', svg: `
     <svg viewBox="0 0 120 120" aria-hidden="true"><g stroke="#14213D" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
     <circle cx="60" cy="58" r="46" fill="#EAF6FF"/>
     <path d="M32 44 L34 18 L54 34 Z" fill="#FF9F43"/><path d="M88 44 L86 18 L66 34 Z" fill="#FF9F43"/>
@@ -128,7 +121,7 @@ const CH = {
     <path d="M56 68 L64 68 L60 73 Z" fill="#FF6B81"/>
     <path d="M60 73 Q54 82 48 76 M60 73 Q66 82 72 76" fill="none"/>
     <path d="M22 100 Q60 122 98 100 L98 124 L22 124 Z" fill="#fff"/></g></svg>` },
-  tuco: { name: 'Tuco', what: 'o tucano', color: 'var(--leaf)', svg: `
+  tuco: { name: 'Tuco', color: 'var(--leaf)', svg: `
     <svg viewBox="0 0 120 120" aria-hidden="true"><g stroke="#14213D" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
     <ellipse cx="50" cy="78" rx="30" ry="38" fill="#2B2F4A"/>
     <ellipse cx="50" cy="88" rx="17" ry="24" fill="#fff"/>
@@ -139,232 +132,179 @@ const CH = {
     <circle cx="54" cy="38" r="9" fill="#fff"/><circle cx="56" cy="38" r="4" fill="#14213D"/></g></svg>` }
 };
 
-/* ---------- Conteúdo: 6 lições de inglês bem básico ---------- */
-// palavra: [inglês, português, figura]  (figura = emoji, cor CSS ou número)
+/* ---------- Conteúdo: 6 lições, 6 palavras cada, tudo concreto e desenhável ---------- */
+// palavra: [inglês, figura]  (figura = emoji, cor CSS ou número). pt = tema falado em português.
 const UNITS = [
-  { id:'hello', t:'Hello!', pt:'Cumprimentos', emo:'👋', host:'bolt', c:'var(--sun)', words:[
-      ['hello','olá','👋'],['goodbye','tchau','🚪'],['good morning','bom dia','☀️'],['good night','boa noite','🌙'],
-      ['please','por favor','🙏'],['thank you','obrigado','🎁'],['yes','sim','👍'],['no','não','👎']],
-    talk:[
-      {en:'Hello! I am Bolt.',pt:'Olá! Eu sou o Bolt.',opts:['Hello, Bolt!','Good night!']},
-      {en:'Good morning, my friend!',pt:'Bom dia, meu amigo!',opts:['Good morning!','Goodbye!']},
-      {en:'Do you like robots?',pt:'Você gosta de robôs?',opts:['Yes!','Thank you.']},
-      {en:'Here is a gift for you!',pt:'Aqui está um presente para você!',opts:['Thank you!','No.']},
-      {en:'Goodbye! See you soon!',pt:'Tchau! Até logo!',opts:['Goodbye, Bolt!','Hello!']}]},
-  { id:'colors', t:'Colors', pt:'Cores', emo:'🎨', host:'luna', c:'var(--coral)', kind:'sw', words:[
-      ['red','vermelho','#E63946'],['blue','azul','#2F6BFF'],['yellow','amarelo','#FFD60A'],['green','verde','#2BB673'],
-      ['orange','laranja','#FF8C1A'],['pink','rosa','#FF7EB6'],['purple','roxo','#8E44EC'],['black','preto','#111111']],
-    talk:[
-      {en:'Hi! I am Luna. I love colors!',pt:'Oi! Eu sou a Luna. Eu amo cores!',opts:['Hello, Luna!','Goodbye!']},
-      {en:'The sun is yellow.',pt:'O sol é amarelo.',opts:['Yes, yellow!','No, purple!']},
-      {en:'What color is the sky?',pt:'De que cor é o céu?',opts:['It is blue.','It is pink.']},
-      {en:'What color is a leaf?',pt:'De que cor é uma folha?',opts:['It is green.','It is black.']},
-      {en:'My rocket is red!',pt:'Meu foguete é vermelho!',opts:['I like red!','Good night.']}]},
-  { id:'numbers', t:'Numbers', pt:'Números', emo:'🔢', host:'bolt', c:'var(--blue)', kind:'num', words:[
-      ['one','um','1'],['two','dois','2'],['three','três','3'],['four','quatro','4'],['five','cinco','5'],
-      ['six','seis','6'],['seven','sete','7'],['eight','oito','8'],['nine','nove','9'],['ten','dez','10']],
-    talk:[
-      {en:'Let us count! One, two...',pt:'Vamos contar! Um, dois...',opts:['Three!','Ten!']},
-      {en:'I have two arms.',pt:'Eu tenho dois braços.',opts:['Two arms!','Nine arms!']},
-      {en:'How many fingers on one hand?',pt:'Quantos dedos em uma mão?',opts:['Five!','Eight!']},
-      {en:'Four, five, six...',pt:'Quatro, cinco, seis...',opts:['Seven!','One!']},
-      {en:'Eight, nine...',pt:'Oito, nove...',opts:['Ten!','Two!']}]},
-  { id:'animals', t:'Animals', pt:'Animais', emo:'🐶', host:'tuco', c:'var(--leaf)', words:[
-      ['dog','cachorro','🐶'],['cat','gato','🐱'],['bird','pássaro','🐦'],['fish','peixe','🐟'],
-      ['horse','cavalo','🐴'],['cow','vaca','🐮'],['monkey','macaco','🐵'],['lion','leão','🦁']],
-    talk:[
-      {en:'Hello! I am Tuco. I am a bird.',pt:'Olá! Eu sou o Tuco. Eu sou um pássaro.',opts:['Hello, Tuco!','Good night!']},
-      {en:'Which animal says "woof"?',pt:'Qual animal faz "au au"?',opts:['The dog!','The fish!']},
-      {en:'Which animal says "meow"?',pt:'Qual animal faz "miau"?',opts:['The cat!','The cow!']},
-      {en:'The fish lives in the water.',pt:'O peixe vive na água.',opts:['Yes, the fish!','No, the horse!']},
-      {en:'The lion is big!',pt:'O leão é grande!',opts:['Yes, very big!','It is a bird.']}]},
-  { id:'food', t:'Food', pt:'Comida', emo:'🍎', host:'luna', c:'var(--grape)', words:[
-      ['apple','maçã','🍎'],['banana','banana','🍌'],['milk','leite','🥛'],['bread','pão','🍞'],
-      ['water','água','💧'],['egg','ovo','🥚'],['cheese','queijo','🧀'],['juice','suco','🧃']],
-    talk:[
-      {en:'I am hungry!',pt:'Estou com fome!',opts:['Here is an apple.','Good morning.']},
-      {en:'Do you like bananas?',pt:'Você gosta de banana?',opts:['Yes, I like bananas!','It is blue.']},
-      {en:'I am thirsty.',pt:'Estou com sede.',opts:['Here is water.','Here is bread.']},
-      {en:'Cats love milk!',pt:'Gatos amam leite!',opts:['Milk, please!','Goodbye!']},
-      {en:'Yummy! Thank you!',pt:'Que delícia! Obrigada!',opts:['You are welcome!','No.']}]},
-  { id:'family', t:'Family', pt:'Família', emo:'👨‍👩‍👧', host:'tuco', c:'var(--sun)', words:[
-      ['mom','mamãe','👩'],['dad','papai','👨'],['baby','bebê','👶'],['brother','irmão','👦'],
-      ['sister','irmã','👧'],['grandma','vovó','👵'],['grandpa','vovô','👴'],['friend','amigo','🤝']],
-    talk:[
-      {en:'This is my family!',pt:'Esta é a minha família!',opts:['Hello, family!','Goodbye!']},
-      {en:'This is my mom.',pt:'Esta é a minha mãe.',opts:['Hello, mom!','Hello, baby!']},
-      {en:'This is my dad.',pt:'Este é o meu pai.',opts:['Hello, dad!','Hello, grandma!']},
-      {en:'I love my grandma and grandpa.',pt:'Eu amo minha vovó e meu vovô.',opts:['I love my family too!','I am a fish.']},
-      {en:'You are my friend!',pt:'Você é meu amigo!',opts:['Yes, my friend!','No, thank you.']}]}
+  { id:'animals', t:'Animals', pt:'os animais', emo:'🐶', host:'tuco', c:'var(--leaf)', words:[
+      ['dog','🐶'],['cat','🐱'],['fish','🐟'],['bird','🐦'],['cow','🐮'],['lion','🦁']]},
+  { id:'colors', t:'Colors', pt:'as cores', emo:'🎨', host:'luna', c:'var(--coral)', kind:'sw', words:[
+      ['red','#E63946'],['blue','#2F6BFF'],['yellow','#FFD60A'],['green','#2BB673'],['orange','#FF8C1A'],['pink','#FF7EB6']]},
+  { id:'numbers', t:'Numbers', pt:'os números', emo:'🖐️', host:'bolt', c:'var(--blue)', kind:'num', words:[
+      ['one',1],['two',2],['three',3],['four',4],['five',5],['six',6]]},
+  { id:'food', t:'Food', pt:'as comidas', emo:'🍎', host:'luna', c:'var(--grape)', words:[
+      ['apple','🍎'],['banana','🍌'],['milk','🥛'],['bread','🍞'],['egg','🥚'],['cheese','🧀']]},
+  { id:'toys', t:'Toys', pt:'os brinquedos', emo:'🧸', host:'bolt', c:'var(--sun)', words:[
+      ['ball','⚽'],['car','🚗'],['teddy bear','🧸'],['robot','🤖'],['book','📕'],['kite','🪁']]},
+  { id:'body', t:'Body', pt:'o corpo', emo:'✋', host:'tuco', c:'var(--aqua)', words:[
+      ['eye','👁️'],['ear','👂'],['nose','👃'],['mouth','👄'],['hand','✋'],['foot','🦶']]}
 ];
 
 /* ---------- Progresso (fica só neste aparelho) ---------- */
-let store = { stars:{}, talk:{}, cards:{} };
-try { Object.assign(store, JSON.parse(localStorage.getItem('turma-hello') || '{}')); } catch (e) {}
+let store = { stars:{} };
+try { Object.assign(store, JSON.parse(localStorage.getItem('turma-hello') || '{}')); store.stars = store.stars || {}; } catch (e) {}
 const save = () => { try { localStorage.setItem('turma-hello', JSON.stringify(store)); } catch (e) {} };
 
-/* ---------- Voz em inglês ---------- */
+/* ---------- Voz: instruções em português, palavras em inglês ---------- */
 const hasVoice = 'speechSynthesis' in window;
-function say(text) {
+const voiceFor = lang => { const vs = speechSynthesis.getVoices(), p = lang.slice(0, 2);
+  return vs.find(v => v.lang.replace('_', '-') === lang) || vs.find(v => v.lang.slice(0, 2) === p); };
+// say(['en','Dog'], ['pt','Muito bem!']) fala as partes em sequência, cada uma na sua língua.
+function say(...parts) {
   if (!hasVoice) return;
   try {
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'en-US'; u.rate = 0.8; u.pitch = 1.1;
-    const v = speechSynthesis.getVoices().find(v => /^en[-_]US/i.test(v.lang)) || speechSynthesis.getVoices().find(v => /^en/i.test(v.lang));
-    if (v) u.voice = v;
-    speechSynthesis.speak(u);
+    parts.forEach(([l, text], i) => {
+      const u = new SpeechSynthesisUtterance(text), lang = l === 'en' ? 'en-US' : 'pt-BR';
+      u.lang = lang; u.rate = l === 'en' ? 0.7 : 0.95; u.pitch = 1.15;
+      const v = voiceFor(lang); if (v) u.voice = v;
+      if (i === 0) u.onstart = () => talking(true);
+      if (i === parts.length - 1) u.onend = u.onerror = () => talking(false);
+      speechSynthesis.speak(u);
+    });
   } catch (e) {}
 }
+const talking = on => { const a = document.querySelector('.avatar'); if (a) a.classList.toggle('talking', on); };
 if (hasVoice) { try { speechSynthesis.getVoices(); } catch (e) {} }
 
 /* ---------- Utilidades ---------- */
 const app = document.getElementById('app'), live = document.getElementById('live');
+const $ = id => document.getElementById(id);
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const pick = a => a[Math.floor(Math.random() * a.length)];
 const starStr = n => '★'.repeat(n) + '☆'.repeat(3 - n);
 const avatar = (id, big) => `<div class="avatar${big ? ' big' : ''}" style="--c:${CH[id].color}">${CH[id].svg}</div>`;
-const pic = (u, w) => u.kind === 'sw' ? `<div class="pic sw" style="background:${w[2]}"></div>`
-  : u.kind === 'num' ? `<div class="pic num">${w[2]}</div>` : `<div class="pic">${w[2]}</div>`;
-const header = (title, back) => `<div class="top"><button class="btn ghost round" data-go="${back}" aria-label="Voltar">←</button><h2>${title}</h2></div>`;
-let timer;
-function show(html) { clearTimeout(timer); app.innerHTML = html; window.scrollTo(0, 0); }
-
-app.addEventListener('click', e => {
-  const b = e.target.closest('[data-go]');
-  if (!b) return;
-  const [view, id] = b.dataset.go.split(':');
-  const u = UNITS.find(x => x.id === id);
-  ({ home, unit, talk, cards, game })[view](u);
-});
+const pic = (u, w) => u.kind === 'sw' ? `<div class="pic sw" style="background:${w[1]}"></div>`
+  : u.kind === 'num' ? `<div class="pic num">${w[1]}<span>${'●'.repeat(w[1])}</span></div>` : `<div class="pic">${w[1]}</div>`;
+let timers = [];
+const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+function show(html) { timers.forEach(clearTimeout); timers = []; app.innerHTML = html; window.scrollTo(0, 0); }
+const PRAISE = ['Muito bem!', 'Isso mesmo!', 'Você acertou!', 'Que legal!'];
 
 /* ---------- Telas ---------- */
+// Primeira tela: um toque libera o som do aparelho.
+function start() {
+  show(`<div class="center" style="padding-top:24px">
+      <h1>Turma do Hello</h1>
+      ${avatar('bolt', true)}
+      <button class="btn huge" id="play" aria-label="Começar">▶</button>
+      <p class="muted">Inglês para quem ainda não lê. Aumente o volume!</p>
+    </div>`);
+  $('play').onclick = () => { home(); say(['en', 'Hello! I am Bolt!'], ['pt', 'Toque em uma figura para brincar!']); };
+}
+
 function home() {
   const total = Object.values(store.stars).reduce((a, b) => a + b, 0);
   show(`
-    <div class="top"><h1>Turma do Hello</h1><div class="stars-total" aria-label="${total} estrelas">★ ${total}/${UNITS.length * 3}</div></div>
-    <div class="hero">${avatar('bolt')}
-      <div class="bubble"><div class="en">Hello! Let's play!</div><div class="pt">Olá! Vamos brincar? Escolha uma lição.</div></div>
-    </div>
-    <div class="units">${UNITS.map(u => `
-      <button class="unit" style="--c:${u.c}" data-go="unit:${u.id}">
-        <span class="emo">${u.emo}</span><span class="t">${u.t}</span><span class="s">${u.pt} · com ${CH[u.host].name}</span>
-        <span class="st" aria-label="${store.stars[u.id] || 0} de 3 estrelas">${starStr(store.stars[u.id] || 0)}</span>
+    <div class="top"><h1>Turma do Hello</h1><div class="total" aria-label="${total} estrelas">★ ${total}</div></div>
+    <div class="hero">${avatar('bolt')}<div class="bubble">Hello! Let's play!</div>
+      <button class="btn" id="hear" aria-label="Ouvir de novo">🔊</button></div>
+    <div class="tiles">${UNITS.map(u => `
+      <button class="tile" style="--c:${u.c}" data-u="${u.id}" aria-label="${u.t}: ${u.pt}">
+        <span class="emo">${u.emo}</span><span class="t">${u.t}</span>
+        <span class="st">${starStr(store.stars[u.id] || 0)}</span>
       </button>`).join('')}</div>
-    <p class="note muted"><b>Para os pais:</b> o som usa a voz em inglês do próprio aparelho.
-      ${hasVoice ? 'Se não ouvir nada, aumente o volume de mídia.' : 'Este navegador não tem voz disponível; abra no Chrome para ouvir a pronúncia.'}
-      Sessões curtas, de 5 a 10 minutos por dia, funcionam melhor nessa idade.</p>`);
+    <details><summary>Para os pais</summary>
+      <p class="muted">A criança não precisa ler: o personagem fala as instruções em português e as palavras em inglês, devagar.
+      Cada lição leva uns 4 minutos e ensina 6 palavras, 3 de cada vez. Uma lição por dia é o bastante; repetir a mesma lição
+      em dias seguidos ajuda muito nessa idade. Sente junto e repita as palavras em voz alta com a criança.
+      ${hasVoice ? 'O som usa a voz do próprio aparelho: se ficar mudo, aumente o volume de mídia.' : 'Este navegador não tem voz; abra no Chrome para ouvir.'}</p>
+    </details>`);
+  $('hear').onclick = () => say(['en', "Hello! Let's play!"], ['pt', 'Toque em uma figura para brincar!']);
+  app.querySelectorAll('.tile').forEach(b => b.onclick = () => lesson(UNITS.find(u => u.id === b.dataset.u)));
 }
 
-function unit(u) {
+/* Uma lição: apresenta 3 palavras, pratica as 3, apresenta mais 3, pratica, e termina misturando tudo. */
+function lesson(u) {
+  const [g1, g2] = [u.words.slice(0, 3), u.words.slice(3)];
+  const steps = [];
+  for (const g of [g1, g2]) {
+    g.forEach(w => steps.push({ teach: w }));
+    shuffle(g).forEach((w, i) => steps.push({ find: w, pool: g, n: i ? 3 : 2 }));
+  }
+  shuffle(u.words).slice(0, 4).forEach(w => steps.push({ find: w, pool: u.words, n: 4 }));
+  let i = 0, miss = 0;
   const h = CH[u.host];
-  show(`
-    ${header(`${u.t} <span class="muted">${u.pt}</span>`, 'home')}
-    <div class="hero">${avatar(u.host)}
-      <div class="bubble"><div class="en">I am ${h.name}!</div><div class="pt">Eu sou ${h.name}, ${h.what}. O que vamos fazer?</div></div>
-    </div>
-    <div class="acts">
-      <button class="btn act wide" style="--c:var(--sun)" data-go="cards:${u.id}"><span class="ico">🃏</span><span>Aprender<small>Veja e escute ${u.words.length} palavras</small></span><span class="done">${store.cards[u.id] ? '✔' : ''}</span></button>
-      <button class="btn act wide" style="--c:var(--blue)" data-go="talk:${u.id}"><span class="ico">💬</span><span>Conversar<small>Responda ${h.name} em inglês</small></span><span class="done">${store.talk[u.id] ? '✔' : ''}</span></button>
-      <button class="btn act wide" style="--c:var(--leaf)" data-go="game:${u.id}"><span class="ico">🎧</span><span>Jogar<small>Escute e toque na figura certa</small></span><span class="done">${starStr(store.stars[u.id] || 0)}</span></button>
-    </div>`);
-  say(`I am ${h.name}!`);
+  const top = () => `<div class="top"><button class="btn ghost" id="home" aria-label="Voltar ao início">🏠</button>
+    <div class="bar" role="progressbar" aria-valuenow="${i}" aria-valuemax="${steps.length}"><i style="width:${i / steps.length * 100}%"></i></div>
+    <button class="btn" id="hear" aria-label="Ouvir de novo">🔊</button></div>`;
+  const next = () => { if (++i < steps.length) return step(); finish(); };
+
+  function step() {
+    const s = steps[i];
+    const intro = i === 0 ? [['en', `Hello! I am ${h.name}!`], ['pt', `Vamos aprender ${u.pt} em inglês!`]] : [];
+    if (s.teach) {
+      const w = s.teach;
+      show(`${top()}
+        <div class="hero">${avatar(u.host)}<div class="bubble">${w[0]}</div></div>
+        <button class="card" id="card" aria-label="Ouvir ${w[0]}">${pic(u, w)}</button>
+        <div class="row"><button class="btn go" id="next" aria-label="Próxima" hidden>➜</button></div>`);
+      const speak = () => say(...intro, ['pt', 'Escute!'], ['en', w[0]], ['en', w[0]], ['pt', 'Agora fala você!'], ['en', w[0]]);
+      speak();
+      const reveal = () => { $('next').hidden = false; };
+      $('card').onclick = () => { say(['en', w[0]]); reveal(); };
+      $('hear').onclick = speak;
+      $('next').onclick = next;
+      later(reveal, intro.length ? 9000 : 5000);
+    } else {
+      const w = s.find;
+      const opts = shuffle([w, ...shuffle(s.pool.filter(x => x !== w)).slice(0, s.n - 1)]);
+      show(`${top()}
+        <div class="hero">${avatar(u.host)}<div class="bubble">${w[0]}?</div></div>
+        <div class="choices${opts.length === 2 ? ' two' : ''}">${opts.map((o, k) => `<button class="choice" data-k="${k}" aria-label="Figura ${k + 1}">${pic(u, o)}</button>`).join('')}</div>`);
+      const ask = () => say(['pt', 'Cadê?'], ['en', w[0]]);
+      ask();
+      $('hear').onclick = ask;
+      let locked = false, wrong = 0;
+      const btns = [...app.querySelectorAll('.choice')];
+      btns.forEach(b => b.onclick = () => {
+        if (locked) return;
+        const o = opts[b.dataset.k];
+        if (o !== w) {
+          miss++; wrong++; b.classList.add('bad'); b.disabled = true;
+          say(['pt', 'Esse é'], ['en', o[0]], ['pt', 'Cadê?'], ['en', w[0]]);
+          live.textContent = 'Tente outra figura';
+          if (wrong >= 2) btns[opts.indexOf(w)].classList.add('hint');   // ajuda depois de dois erros
+          return;
+        }
+        locked = true; b.classList.remove('hint'); b.classList.add('ok');
+        live.textContent = 'Certo! ' + w[0];
+        say(['en', 'Yes! ' + w[0] + '!'], ['pt', pick(PRAISE)]);
+        later(next, 2600);
+      });
+    }
+    $('home').onclick = () => { if (hasVoice) speechSynthesis.cancel(); home(); };
+  }
+
+  function finish() {
+    const stars = miss <= 2 ? 3 : miss <= 6 ? 2 : 1;
+    store.stars[u.id] = Math.max(store.stars[u.id] || 0, stars); save();
+    show(`<div class="center" style="padding-top:16px">
+        ${avatar(u.host, true)}
+        <div class="bigstars" aria-label="${stars} de 3 estrelas">${starStr(stars)}</div>
+        <h1>Great job!</h1>
+        <div class="row">
+          <button class="btn ghost" id="again" aria-label="Brincar de novo">🔁</button>
+          <button class="btn go" id="home" aria-label="Voltar ao início">🏠</button>
+        </div>
+      </div>`);
+    say(['en', 'Great job!'], ['pt', `Você ganhou ${['uma estrela', 'duas estrelas', 'três estrelas'][stars - 1]}!`], ['en', 'Bye-bye!']);
+    $('again').onclick = () => lesson(u);
+    $('home').onclick = home;
+  }
+  step();
 }
 
-function cards(u, i = 0) {
-  const w = u.words[i], last = i === u.words.length - 1;
-  show(`
-    ${header('Aprender', 'unit:' + u.id)}
-    <div class="dots">${u.words.map((_, k) => `<i class="${k <= i ? 'on' : ''}"></i>`).join('')}</div>
-    <button class="card" id="card" aria-label="Ouvir ${w[0]}">${pic(u, w)}<div class="word">${w[0]}</div><div class="muted">${w[1]}</div></button>
-    <div class="row">
-      <button class="btn ghost round" id="prev" aria-label="Anterior" ${i ? '' : 'hidden'}>←</button>
-      <button class="btn round" id="hear" aria-label="Ouvir de novo">🔊</button>
-      <button class="btn grow" id="next" style="--c:var(--leaf)">${last ? 'Terminei!' : 'Próxima →'}</button>
-    </div>`);
-  say(w[0]);
-  const q = id => document.getElementById(id);
-  q('card').onclick = q('hear').onclick = () => say(w[0]);
-  q('prev').onclick = () => cards(u, i - 1);
-  q('next').onclick = () => {
-    if (!last) return cards(u, i + 1);
-    store.cards[u.id] = true; save();
-    result(u, { title: 'Well done!', pt: 'Você viu todas as palavras. Que tal conversar ou jogar agora?' });
-  };
-}
-
-function talk(u, i = 0) {
-  const t = u.talk[i], right = t.opts[0];
-  show(`
-    ${header('Conversar', 'unit:' + u.id)}
-    <div class="dots">${u.talk.map((_, k) => `<i class="${k < i ? 'on' : ''}"></i>`).join('')}</div>
-    <div class="hero">${avatar(u.host, true)}
-      <div class="bubble"><div class="en">${t.en}</div><div class="pt">${t.pt}</div></div>
-    </div>
-    <div class="row"><button class="btn round" id="hear" aria-label="Ouvir de novo">🔊</button><p class="muted grow">Toque na resposta certa:</p></div>
-    <div class="opts">${shuffle(t.opts).map(o => `<button class="btn ghost wide opt">${o}</button>`).join('')}</div>`);
-  say(t.en);
-  document.getElementById('hear').onclick = () => say(t.en);
-  let locked = false;
-  app.querySelectorAll('.opt').forEach(b => b.onclick = () => {
-    if (locked) return;
-    say(b.textContent);
-    if (b.textContent !== right) { b.classList.add('bad'); b.disabled = true; live.textContent = 'Tente outra vez'; return; }
-    locked = true; b.classList.add('ok'); live.textContent = 'Certo!';
-    timer = setTimeout(() => {
-      if (i < u.talk.length - 1) return talk(u, i + 1);
-      store.talk[u.id] = true; save();
-      result(u, { title: 'Great talk!', pt: `Você conversou em inglês com ${CH[u.host].name}!` });
-    }, 1700);
-  });
-}
-
-function game(u) {
-  const rounds = shuffle(u.words).slice(0, 6);
-  let r = 0, miss = 0;
-  (function round() {
-    const w = rounds[r];
-    const options = shuffle([w, ...shuffle(u.words.filter(x => x !== w)).slice(0, 3)]);
-    show(`
-      ${header('Jogar', 'unit:' + u.id)}
-      <div class="dots">${rounds.map((_, k) => `<i class="${k < r ? 'on' : ''}"></i>`).join('')}</div>
-      <div class="hero">${avatar(u.host)}
-        <div class="bubble"><div class="en">Listen!</div><div class="pt">Escute e toque na figura certa.</div></div>
-        <button class="btn round" id="hear" aria-label="Ouvir de novo">🔊</button>
-      </div>
-      <div class="grid4">${options.map((o, k) => `<button class="choice" data-k="${k}" aria-label="Opção ${k + 1}">${pic(u, o)}</button>`).join('')}</div>`);
-    say(w[0]);
-    document.getElementById('hear').onclick = () => say(w[0]);
-    let locked = false;
-    app.querySelectorAll('.choice').forEach(b => b.onclick = () => {
-      if (locked) return;
-      if (options[b.dataset.k] !== w) { miss++; b.classList.add('bad'); b.disabled = true; say(w[0]); live.textContent = 'Tente outra vez'; return; }
-      locked = true; b.classList.add('ok'); live.textContent = 'Certo! ' + w[0];
-      say('Yes! ' + w[0]);
-      timer = setTimeout(() => {
-        if (++r < rounds.length) return round();
-        const stars = miss <= 1 ? 3 : miss <= 4 ? 2 : 1;
-        store.stars[u.id] = Math.max(store.stars[u.id] || 0, stars); save();
-        result(u, { stars, title: stars === 3 ? 'Perfect!' : 'Good job!', pt: stars === 3 ? 'Você acertou quase tudo de primeira!' : 'Jogue de novo para ganhar 3 estrelas.', again: true });
-      }, 1500);
-    });
-  })();
-}
-
-function result(u, o) {
-  show(`
-    ${header(u.t, 'unit:' + u.id)}
-    <div class="result">
-      ${avatar(u.host, true)}
-      ${o.stars ? `<div class="bigstars" aria-label="${o.stars} de 3 estrelas">${starStr(o.stars)}</div>` : ''}
-      <h1>${o.title}</h1><p>${o.pt}</p>
-      ${o.again ? `<button class="btn wide" style="--c:var(--leaf)" data-go="game:${u.id}">Jogar de novo</button>` : ''}
-      <button class="btn wide" data-go="unit:${u.id}">Continuar com ${CH[u.host].name}</button>
-      <button class="btn ghost wide" data-go="home">Todas as lições</button>
-    </div>`);
-  say(o.title);
-}
-
-home();
+start();
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) {}
 }

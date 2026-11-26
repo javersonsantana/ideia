@@ -1,15 +1,20 @@
 # Turma do Hello
 
-App de inglês bem básico (nível pré-A1/A1) para crianças, com três personagens originais:
-**Bolt** (robô), **Luna** (gata astronauta) e **Tuco** (tucano).
+App de inglês para crianças pequenas que **ainda não leem** (a partir de 4 anos), com três personagens
+originais: **Bolt** (robô), **Luna** (gata astronauta) e **Tuco** (tucano).
 
-Cada lição tem três atividades:
+Nada depende de leitura: o personagem fala as instruções em português e as palavras em inglês, e todos
+os botões são desenhos. Cada lição ensina 6 palavras em cerca de 4 minutos:
 
-- **Aprender** – cartas com figura, palavra, tradução e áudio.
-- **Conversar** – o personagem fala em inglês e a criança escolhe a resposta.
-- **Jogar** – escutar a palavra e tocar na figura certa; vale até 3 estrelas.
+1. apresenta 3 palavras (escutar, tocar na figura, repetir em voz alta);
+2. pratica essas 3 ("Cadê? dog") com 2 e depois 3 figuras;
+3. repete o mesmo com as outras 3 palavras;
+4. termina misturando as 6, com 4 figuras por vez.
 
-Lições atuais: Hello!, Colors, Numbers, Animals, Food, Family.
+Quando a criança erra, o app diz o nome da figura tocada e pergunta de novo; depois de dois erros,
+a figura certa pisca. No fim, a criança ganha de 1 a 3 estrelas.
+
+Lições atuais: Animals, Colors, Numbers, Food, Toys, Body.
 
 ## Como rodar
 
@@ -32,10 +37,9 @@ Para publicar na Play Store depois, o mesmo código pode ser empacotado com
 
 ## Como adicionar uma lição
 
-Tudo fica em `index.html`, na lista `UNITS`. Cada lição é um objeto com:
-
-- `words`: `[inglês, português, figura]` – a figura é um emoji (ou uma cor com `kind:'sw'`, ou um número com `kind:'num'`);
-- `talk`: falas do personagem com `en`, `pt` e `opts` (a **primeira** opção é a resposta certa; a ordem é embaralhada na tela).
+Tudo fica em `index.html`, na lista `UNITS`. Cada lição tem 6 `words` no formato `[inglês, figura]`
+(a figura é um emoji, uma cor com `kind:'sw'` ou um número com `kind:'num'`) e um `pt` com o tema
+falado em português ("os animais"). Prefira palavras concretas, que cabem em um desenho.
 
 ## Sobre os personagens
 
