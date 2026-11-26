@@ -33,8 +33,9 @@ python3 -m http.server 8000
   sininho e parabéns falado. O total aparece na tela inicial.
 - **Microfone:** na apresentação de cada palavra aparece um botão 🎤. A criança toca, repete a palavra e o app
   confere com o reconhecimento de voz do navegador: mostra ✅ se entendeu ou 🔁 para tentar de novo.
-  Funciona no Chrome (computador ou Android), em página HTTPS ou `localhost`. O reconhecimento erra bastante
-  com crianças pequenas, por isso nunca trava a lição: depois de duas tentativas dá para seguir sem a estrelinha.
+  Funciona no Chrome (computador ou Android), em página HTTPS ou `localhost`. A criança só avança quando
+  acerta; como o reconhecimento pode errar com crianças pequenas, depois de 5 tentativas aparece um link
+  pequeno para o adulto pular a palavra, sem estrelinha.
 - **Sem microfone:** o app avisa na primeira tela que não consegue ouvir e não finge que conferiu: a criança
   só repete em voz alta e segue, e as estrelinhas vêm de achar a figura certa.
 

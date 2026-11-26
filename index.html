@@ -106,6 +106,7 @@ button:focus-visible,summary:focus-visible{outline:4px solid var(--blue);outline
 details{background:var(--surface);border:2px dashed var(--muted);border-radius:16px;padding:10px 14px}
 summary{font-weight:800;cursor:pointer}
 details p{margin-top:8px}
+.skip{align-self:center;background:none;border:0;padding:8px 12px;color:var(--muted);font:700 .85rem var(--body);text-decoration:underline}
 .micst{font-weight:700;font-size:.92rem;border:2px solid var(--line);border-radius:16px;padding:10px 14px;background:var(--surface);max-width:34ch}
 .micst.yes{border-color:var(--leaf)}.micst.no{border-color:var(--coral)}
 audio{display:none}
@@ -302,7 +303,7 @@ function home() {
       Cada lição leva uns 5 minutos e ensina 6 palavras, 3 de cada vez. Uma lição por dia é o bastante; repetir a mesma lição
       em dias seguidos ajuda muito nessa idade. Sente junto e repita as palavras em voz alta com a criança.</p>
       <p class="muted">Cada acerto vale uma estrelinha ⭐ com festa e parabéns. ${canListen()
-        ? 'Depois de ouvir a palavra, a criança toca no 🎤 e repete. O app mostra ✅ se ouviu a palavra certa, ou 🔁 para tentar de novo. O reconhecimento de voz pode errar com crianças pequenas.'
+        ? 'Depois de ouvir a palavra, a criança toca no 🎤 e repete. O app mostra ✅ se ouviu a palavra certa, ou 🔁 para tentar de novo, e só avança quando ela acerta. O reconhecimento de voz pode errar com crianças pequenas: depois de 5 tentativas aparece um link pequeno para o adulto pular a palavra, sem estrelinha.'
         : 'Aqui o app não consegue usar o microfone, então não confere a fala: a criança só repete em voz alta, e as estrelinhas vêm de achar a figura certa. Para o app ouvir e dizer se ela falou certo, abra no navegador Chrome (computador ou Android) e permita o microfone.'}</p>
     </details>`);
   $('hear').onclick = () => say('lets-play', 'toque');
@@ -345,9 +346,10 @@ function lesson(u) {
         <button class="card" id="card" aria-label="Ouvir ${w[0]}">${pic(u, w)}<span class="badge" id="badge" hidden></span></button>
         <div class="row">
           <button class="btn ghost rep" id="rep" aria-label="Ouvir de novo">🔁</button>
-          ${mic ? '<button class="btn mic" id="mic" aria-label="Falar no microfone">🎤</button><button class="btn go" id="next" aria-label="Próxima" hidden>➜</button>'
+          ${mic ? '<button class="btn mic" id="mic" aria-label="Falar no microfone">🎤</button>'
                 : '<button class="btn go" id="next" aria-label="Próxima" hidden>➜</button>'}
-        </div>`);
+        </div>
+        ${mic ? '<button class="skip" id="skip" hidden>Pular esta palavra (adulto)</button>' : ''}`);
       const speak = () => say(...intro, 'escute', id, id, mic ? 'mic' : 'fala', id);
       const again = () => say('escute', id, id);
       speak();
@@ -364,10 +366,9 @@ function lesson(u) {
         $('card').onclick = () => { say(id); reveal(); };
         later(reveal, 6000 + (intro.length ? 4000 : 0));
       } else {
+        // Com microfone a criança só avança quando o app ouve a palavra certa.
         let tries = 0, busy = false;
-        const reveal = () => { const n = $('next'); if (n) n.hidden = false; };
-        $('next').onclick = () => { if (!done) next(); };
-        later(reveal, 20000 + (intro.length ? 4000 : 0));
+        $('skip').onclick = next;
         $('mic').onclick = () => {
           if (busy || done) return;
           busy = true; hush(); $('badge').hidden = true; $('mic').classList.add('on'); live.textContent = 'Ouvindo';
@@ -376,10 +377,10 @@ function lesson(u) {
             const m = $('mic'); if (!m) return;
             m.classList.remove('on');
             if (ok === null) { micOff = true; return step(); }   // microfone indisponível: volta no modo sem conferência
-            if (ok) { m.hidden = true; $('next').hidden = true; return win(); }
+            if (ok) { m.hidden = true; $('skip').hidden = true; return win(); }
             badge('🔁'); live.textContent = 'Ainda não. Tente de novo';
-            if (++tries < 2) return say('quase', id, id);
-            say('boa', id); reveal();   // pode tentar de novo no microfone ou seguir
+            say('quase', id, id);
+            if (++tries >= 5) $('skip').hidden = false;   // saída só para o adulto, caso o reconhecimento não entenda a criança
           });
         };
       }
