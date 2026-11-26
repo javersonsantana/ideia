@@ -50,6 +50,7 @@ CLIPS.update({
     "p4": ("pt", "Que legal!", 1.0),
     "p5": ("pt", "Parabéns!", 1.0),
     "p6": ("pt", "Você é demais!", 1.0),
+    "album": ("pt", "Olha quantas estrelinhas você já ganhou!", 1.0),
     "estrelinha": ("pt", "Você ganhou uma estrelinha!", 1.0),
     "s1": ("pt", "Você ganhou uma estrela!", 1.0),
     "s2": ("pt", "Você ganhou duas estrelas!", 1.0),

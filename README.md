@@ -31,6 +31,11 @@ python3 -m http.server 8000
   então o som funciona em qualquer aparelho e sem internet.
 - **Estrelinhas:** cada acerto (falar a palavra ou achar a figura) vale uma estrelinha, com festa na tela,
   sininho e parabéns falado. O total aparece na tela inicial.
+- **Progresso guardado:** o app guarda no aparelho o total de estrelinhas, a nota de cada lição, os dias de
+  estudo e, para cada palavra, quantas vezes a criança achou a figura, falou certo e errou. O botão ⭐🏆 da
+  tela inicial abre o álbum: todas as palavras com 0 a 3 estrelas (achar a figura vale 1 ponto, falar certo
+  vale 2; com 1, 3 e 6 pontos a palavra chega a 1, 2 e 3 estrelas). Lá também há um resumo para os pais,
+  com as palavras que precisam de mais treino, e o botão para apagar o progresso.
 - **Microfone:** na apresentação de cada palavra aparece um botão 🎤. A criança toca, repete a palavra e o app
   confere com o reconhecimento de voz do navegador: mostra ✅ se entendeu ou 🔁 para tentar de novo.
   Funciona no Chrome (computador ou Android), em página HTTPS ou `localhost`. A criança só avança quando
