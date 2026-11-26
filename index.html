@@ -48,7 +48,7 @@ button:focus-visible,summary:focus-visible{outline:4px solid var(--blue);outline
 .top{display:flex;align-items:center;gap:12px}
 .top h1{flex:1;min-width:0}
 .total{font:800 1.2rem var(--display);background:var(--surface);border:3px solid var(--line);border-radius:999px;padding:4px 14px;white-space:nowrap}
-.bar{flex:1;height:22px;background:var(--surface);border:3px solid var(--line);border-radius:999px;overflow:hidden}
+.bar{flex:1;min-width:40px;height:22px;background:var(--surface);border:3px solid var(--line);border-radius:999px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--leaf);transition:width .4s}
 
 .avatar{flex:none;width:96px;height:96px;border-radius:50%;background:var(--c,var(--sun));border:3px solid var(--line);box-shadow:0 5px 0 var(--line);overflow:hidden}
@@ -85,6 +85,17 @@ button:focus-visible,summary:focus-visible{outline:4px solid var(--blue);outline
 .bad{opacity:.3;animation:shake .35s}
 .btn.mic{--c:var(--coral);min-width:84px;min-height:84px;font-size:2.6rem}
 .btn.mic.on{animation:pulse .5s ease-in-out infinite alternate}
+.count{font:800 1.25rem var(--display);background:var(--surface);border:3px solid var(--line);border-radius:999px;padding:6px 12px;white-space:nowrap}
+.count.bump{animation:pop .5s}
+.card{position:relative}
+.badge{position:absolute;top:12px;right:14px;font-size:3rem;line-height:1;animation:pop .5s}
+.btn.said{--c:var(--leaf);min-width:120px;min-height:84px;font-size:2.8rem;animation:pulse .7s ease-in-out 4s infinite alternate}
+.btn.rep{min-width:84px;min-height:84px;font-size:2.4rem}
+.fx{position:fixed;inset:0;pointer-events:none;z-index:20;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.fx b{font-size:9rem;line-height:1;animation:starfly 1.3s ease-out forwards}
+.fx i{position:absolute;left:50%;top:50%;font-style:normal;font-size:2rem;animation:burst 1.2s ease-out forwards}
+@keyframes starfly{0%{transform:scale(.2) rotate(-40deg);opacity:0}30%{transform:scale(1.15) rotate(8deg);opacity:1}60%{transform:scale(1) rotate(0)}100%{transform:scale(.3) translate(60vw,-120vh);opacity:0}}
+@keyframes burst{0%{transform:translate(-50%,-50%) scale(.4);opacity:1}100%{transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(1.2) rotate(var(--r));opacity:0}}
 .hint{animation:pulse .7s ease-in-out infinite alternate}
 @keyframes shake{25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
 @keyframes pop{0%{transform:scale(.7)}70%{transform:scale(1.1)}100%{transform:scale(1)}}
@@ -153,8 +164,8 @@ const UNITS = [
 ];
 
 /* ---------- Progresso (fica só neste aparelho) ---------- */
-let store = { stars:{} };
-try { Object.assign(store, JSON.parse(localStorage.getItem('turma-hello') || '{}')); store.stars = store.stars || {}; } catch (e) {}
+let store = { stars:{}, total:0 };   // stars = nota da lição (1 a 3); total = estrelinhas ganhas a cada acerto
+try { Object.assign(store, JSON.parse(localStorage.getItem('turma-hello') || '{}')); store.stars = store.stars || {}; store.total = store.total || 0; } catch (e) {}
 const save = () => { try { localStorage.setItem('turma-hello', JSON.stringify(store)); } catch (e) {} };
 
 /* ---------- Som: falas gravadas (pasta audio/). Instruções em português, palavras em inglês. ---------- */
@@ -224,7 +235,20 @@ function listen(word, done) {
 const app = document.getElementById('app'), live = document.getElementById('live');
 const $ = id => document.getElementById(id);
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-const praise = () => 'p' + (1 + Math.floor(Math.random() * 4));
+const praise = () => 'p' + (1 + Math.floor(Math.random() * 6));
+const ding = new Audio('audio/ding.mp3'); ding.preload = 'auto';
+// Festa a cada acerto: estrela grande, confete e um sininho.
+function party(big) {
+  try { ding.currentTime = 0; const p = ding.play(); if (p) p.catch(() => {}); } catch (e) {}
+  const fx = document.createElement('div'); fx.className = 'fx'; fx.setAttribute('aria-hidden', 'true');
+  const bits = ['⭐', '🎉', '✨', '🎈', '⭐', '💛', '✨', '🎉'];
+  fx.innerHTML = '<b>⭐</b>' + Array.from({ length: big ? 22 : 12 }, (_, k) => {
+    const a = Math.random() * 6.28, d = 120 + Math.random() * 220;
+    return `<i style="--x:${Math.cos(a) * d}px;--y:${Math.sin(a) * d}px;--r:${Math.random() * 360 - 180}deg">${bits[k % bits.length]}</i>`;
+  }).join('');
+  document.body.appendChild(fx);
+  setTimeout(() => fx.remove(), 1400);
+}
 const starStr = n => '★'.repeat(n) + '☆'.repeat(3 - n);
 const avatar = (id, big) => `<div class="avatar${big ? ' big' : ''}" style="--c:${CH[id].color}">${CH[id].svg}</div>`;
 const pic = (u, w) => u.kind === 'sw' ? `<div class="pic sw" style="background:${w[1]}"></div>`
@@ -250,9 +274,9 @@ function start() {
 }
 
 function home() {
-  const total = Object.values(store.stars).reduce((a, b) => a + b, 0);
+  const total = store.total;
   show(`
-    <div class="top"><h1>Turma do Hello</h1><div class="total" aria-label="${total} estrelas">★ ${total}</div></div>
+    <div class="top"><h1>Turma do Hello</h1><div class="total" aria-label="${total} estrelinhas">⭐ ${total}</div></div>
     <div class="hero">${avatar('bolt')}<div class="bubble">Hello! Let's play!</div>
       <button class="btn" id="hear" aria-label="Ouvir de novo">🔊</button></div>
     <div class="tiles">${UNITS.map(u => `
@@ -264,15 +288,16 @@ function home() {
       <p class="muted">A criança não precisa ler: o personagem fala as instruções em português e as palavras em inglês.
       Cada lição leva uns 5 minutos e ensina 6 palavras, 3 de cada vez. Uma lição por dia é o bastante; repetir a mesma lição
       em dias seguidos ajuda muito nessa idade. Sente junto e repita as palavras em voz alta com a criança.</p>
-      <p class="muted">${canListen()
-        ? 'Microfone: depois de ouvir a palavra, a criança toca no 🎤 e repete. O app confere se entendeu a palavra e nunca trava a lição. O reconhecimento de voz erra bastante com crianças pequenas: use como incentivo, não como nota.'
-        : 'Microfone: para o app conferir a fala da criança, abra no navegador Chrome (computador ou Android) e permita o uso do microfone. Aqui ele não está disponível, então a criança só repete em voz alta.'}</p>
+      <p class="muted">Cada acerto vale uma estrelinha ⭐ com festa e parabéns. ${canListen()
+        ? 'Depois de ouvir a palavra, a criança toca no 🎤 e repete. O app mostra ✅ se entendeu a palavra, ou 🔁 para tentar de novo. O reconhecimento de voz erra bastante com crianças pequenas: use como incentivo, não como nota.'
+        : 'Aqui o microfone não está disponível, então quem confere a fala é você: quando a criança repetir a palavra, toque no ✅ para ela ganhar a estrelinha, ou no 🔁 para ouvir de novo. Para o app conferir a fala sozinho, abra no navegador Chrome (computador ou Android) e permita o microfone.'}</p>
     </details>`);
   $('hear').onclick = () => say('lets-play', 'toque');
   app.querySelectorAll('.tile').forEach(b => b.onclick = () => lesson(UNITS.find(u => u.id === b.dataset.u)));
 }
 
-/* Uma lição: apresenta 3 palavras, pratica as 3, apresenta mais 3, pratica, e termina misturando tudo. */
+/* Uma lição: apresenta 3 palavras, pratica as 3, apresenta mais 3, pratica, e termina misturando tudo.
+   Cada acerto (falar a palavra ou achar a figura) vale uma estrelinha. */
 function lesson(u) {
   const [g1, g2] = [u.words.slice(0, 3), u.words.slice(3)];
   const steps = [];
@@ -281,11 +306,21 @@ function lesson(u) {
     shuffle(g).forEach((w, i) => steps.push({ find: w, pool: g, n: i ? 3 : 2 }));
   }
   shuffle(u.words).slice(0, 4).forEach(w => steps.push({ find: w, pool: u.words, n: 4 }));
-  let i = 0, miss = 0;
+  let i = 0, miss = 0, got = 0;
   const top = () => `<div class="top"><button class="btn ghost" id="home" aria-label="Voltar ao início">🏠</button>
     <div class="bar" role="progressbar" aria-valuenow="${i}" aria-valuemax="${steps.length}"><i style="width:${i / steps.length * 100}%"></i></div>
+    <div class="count" id="count" aria-label="${got} estrelinhas">⭐ ${got}</div>
     <button class="btn" id="hear" aria-label="Ouvir de novo">🔊</button></div>`;
   const next = () => { if (++i < steps.length) return step(); finish(); };
+  // Acertou: estrelinha, festa e parabéns falado. A primeira da lição explica o prêmio.
+  function reward(id) {
+    got++; store.total++; save();
+    const c = $('count'); if (c) { c.textContent = '⭐ ' + got; c.classList.add('bump'); }
+    party();
+    say('yes', id, ...(got === 1 ? ['p5', 'estrelinha'] : [praise()]));
+    live.textContent = 'Parabéns! Ganhou uma estrelinha';
+    later(next, got === 1 ? 4600 : 3400);
+  }
 
   function step() {
     const s = steps[i];
@@ -294,31 +329,40 @@ function lesson(u) {
       const w = s.teach, id = wid(w), mic = canListen();
       show(`${top()}
         <div class="hero">${avatar(u.host)}<div class="bubble">${w[0]}</div></div>
-        <button class="card" id="card" aria-label="Ouvir ${w[0]}">${pic(u, w)}</button>
+        <button class="card" id="card" aria-label="Ouvir ${w[0]}">${pic(u, w)}<span class="badge" id="badge" hidden></span></button>
         <div class="row">
-          ${mic ? '<button class="btn mic" id="mic" aria-label="Falar no microfone">🎤</button>' : ''}
-          <button class="btn go" id="next" aria-label="Próxima" hidden>➜</button>
+          <button class="btn ghost rep" id="rep" aria-label="Ouvir de novo">🔁</button>
+          ${mic ? '<button class="btn mic" id="mic" aria-label="Falar no microfone">🎤</button><button class="btn go" id="next" aria-label="Próxima" hidden>➜</button>'
+                : '<button class="btn said" id="said" aria-label="A criança falou a palavra">✅</button>'}
         </div>`);
-      const speak = () => say(...intro, 'escute', id, id, mic ? 'mic' : 'fala', id);
+      const speak = () => say(...intro, 'escute', id, id, mic ? 'mic' : 'fala', id, ...(mic ? [] : ['verde']));
+      const again = () => say('escute', id, id);
       speak();
-      const reveal = () => { $('next').hidden = false; };
-      $('card').onclick = () => { say(id); if (!mic) reveal(); };
+      $('card').onclick = () => say(id);
       $('hear').onclick = speak;
-      $('next').onclick = next;
-      later(reveal, (mic ? 15000 : 5000) + (intro.length ? 4000 : 0));
-      if (mic) {
+      $('rep').onclick = again;
+      let done = false;
+      const badge = t => { const b = $('badge'); b.textContent = t; b.hidden = false; };
+      const win = () => { if (done) return; done = true; $('card').classList.add('ok'); badge('✅'); reward(id); };
+      if (!mic) {
+        $('said').onclick = win;   // sem microfone, quem confere é o adulto
+      } else {
         let tries = 0, busy = false;
+        const reveal = () => { const n = $('next'); if (n) n.hidden = false; };
+        $('next').onclick = () => { if (!done) next(); };
+        later(reveal, 20000 + (intro.length ? 4000 : 0));
         $('mic').onclick = () => {
-          if (busy) return;
-          busy = true; hush(); $('mic').classList.add('on'); live.textContent = 'Ouvindo';
+          if (busy || done) return;
+          busy = true; hush(); $('badge').hidden = true; $('mic').classList.add('on'); live.textContent = 'Ouvindo';
           cancelListen = listen(w[0], ok => {
             cancelListen = null; busy = false;
             const m = $('mic'); if (!m) return;
             m.classList.remove('on');
-            if (ok === null) { m.hidden = true; say('fala', id); return reveal(); }   // sem microfone: segue sem conferir
-            if (ok) { $('card').classList.add('ok'); m.hidden = true; live.textContent = 'Certo! ' + w[0]; say('yes', id, praise()); return reveal(); }
-            if (++tries < 2) { live.textContent = 'Tente de novo'; return say('quase', id, id); }
-            say('boa', id); reveal();
+            if (ok === null) { micOff = true; return step(); }   // microfone indisponível: volta no modo em que o adulto confere
+            if (ok) { m.hidden = true; $('next').hidden = true; return win(); }
+            badge('🔁'); live.textContent = 'Ainda não. Tente de novo';
+            if (++tries < 2) return say('quase', id, id);
+            say('boa', id); reveal();   // pode tentar de novo no microfone ou seguir
           });
         };
       }
@@ -344,9 +388,7 @@ function lesson(u) {
           return;
         }
         locked = true; b.classList.remove('hint'); b.classList.add('ok');
-        live.textContent = 'Certo! ' + w[0];
-        say('yes', id, praise());
-        later(next, 3200);
+        reward(id);
       });
     }
     $('home').onclick = () => { hush(); home(); };
@@ -359,12 +401,14 @@ function lesson(u) {
         ${avatar(u.host, true)}
         <div class="bigstars" aria-label="${stars} de 3 estrelas">${starStr(stars)}</div>
         <h1>Great job!</h1>
+        <div class="total" aria-label="${got} estrelinhas nesta lição">⭐ × ${got}</div>
         <div class="row">
           <button class="btn ghost" id="again" aria-label="Brincar de novo">🔁</button>
           <button class="btn go" id="home" aria-label="Voltar ao início">🏠</button>
         </div>
       </div>`);
-    say('great', 's' + stars, 'bye');
+    party(true);
+    say('great', 'p5', 's' + stars, 'bye');
     $('again').onclick = () => lesson(u);
     $('home').onclick = () => { hush(); home(); };
   }

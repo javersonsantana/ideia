@@ -29,11 +29,13 @@ python3 -m http.server 8000
 
 - **Som:** todas as falas são gravações em `audio/` (voz sintética natural, geradas por `tools/make_audio.py`),
   então o som funciona em qualquer aparelho e sem internet.
+- **Estrelinhas:** cada acerto (falar a palavra ou achar a figura) vale uma estrelinha, com festa na tela,
+  sininho e parabéns falado. O total aparece na tela inicial.
 - **Microfone:** na apresentação de cada palavra aparece um botão 🎤. A criança toca, repete a palavra e o app
-  confere com o reconhecimento de voz do navegador. Funciona no Chrome (computador ou Android), em página HTTPS
-  ou `localhost`. Onde não há reconhecimento de voz, o botão não aparece e a criança só repete em voz alta.
-  O reconhecimento erra bastante com crianças pequenas, por isso ele nunca trava a lição nem tira estrelas:
-  depois de duas tentativas o app elogia o esforço e segue.
+  confere com o reconhecimento de voz do navegador: mostra ✅ se entendeu ou 🔁 para tentar de novo.
+  Funciona no Chrome (computador ou Android), em página HTTPS ou `localhost`. O reconhecimento erra bastante
+  com crianças pequenas, por isso nunca trava a lição: depois de duas tentativas dá para seguir sem a estrelinha.
+- **Sem microfone:** no lugar do 🎤 aparece um ✅ para o adulto tocar quando a criança repetir a palavra.
 
 ## Instalar no Android
 

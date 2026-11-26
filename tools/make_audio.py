@@ -37,6 +37,10 @@ CLIPS.update({
     "p2": ("pt", "Isso mesmo!", 1.0),
     "p3": ("pt", "Você acertou!", 1.0),
     "p4": ("pt", "Que legal!", 1.0),
+    "p5": ("pt", "Parabéns!", 1.0),
+    "p6": ("pt", "Você é demais!", 1.0),
+    "estrelinha": ("pt", "Você ganhou uma estrelinha!", 1.0),
+    "verde": ("pt", "Falou? Toque no botão verde!", 1.0),
     "s1": ("pt", "Você ganhou uma estrela!", 1.0),
     "s2": ("pt", "Você ganhou duas estrelas!", 1.0),
     "s3": ("pt", "Você ganhou três estrelas!", 1.0),
@@ -52,7 +56,14 @@ def main(models):
     out = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "audio")
     os.makedirs(out, exist_ok=True)
     k = Kokoro(os.path.join(models, "kokoro-v1.0.onnx"), os.path.join(models, "voices-v1.0.bin"))
+    # Sininho de acerto: duas notas curtas.
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i",
+                    "sine=frequency=1047:duration=0.14", "-f", "lavfi", "-i", "sine=frequency=1568:duration=0.5",
+                    "-filter_complex", "[0][1]concat=n=2:v=0:a=1,afade=t=out:st=0.2:d=0.44,volume=0.5",
+                    "-ac", "1", "-ar", "24000", "-b:a", "48k", os.path.join(out, "ding.mp3")], check=True)
     for name, (lang, text, speed) in CLIPS.items():
+        if os.path.exists(os.path.join(out, name + ".mp3")):
+            continue   # já gravado; apague o arquivo para gravar de novo
         samples, sr = k.create(text, voice=EN_VOICE if lang == "en" else PT_VOICE,
                                speed=speed, lang="en-us" if lang == "en" else "pt-br")
         with tempfile.NamedTemporaryFile(suffix=".wav") as tmp:
@@ -65,7 +76,7 @@ def main(models):
                             os.path.join(out, name + ".mp3")], check=True)
         print(name, f"{len(samples) / sr:.2f}s")
     with open(os.path.join(out, "index.json"), "w") as f:
-        json.dump(sorted(CLIPS), f)
+        json.dump(sorted([*CLIPS, "ding"]), f)
 
 if __name__ == "__main__":
     main(sys.argv[1] if len(sys.argv) > 1 else ".")
