@@ -1,0 +1,15 @@
+{
+  "name": "Turma do Hello",
+  "short_name": "Turma Hello",
+  "description": "Inglês básico para crianças com Bolt, Luna e Tuco.",
+  "lang": "pt-BR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#E4F3FF",
+  "theme_color": "#FFC531",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
