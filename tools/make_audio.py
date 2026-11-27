@@ -11,10 +11,12 @@ Uso:  pip install kokoro-onnx soundfile sherpa-onnx
         sherpa-onnx-whisper-small
           (https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models)
       python3 tools/make_audio.py PASTA_DOS_MODELOS [--all] [--only=PREFIXO]
+Com a variável OPENAI_API_KEY definida (e rede liberada para api.openai.com), usa primeiro a voz
+neural da OpenAI, que é bem mais natural; sem ela, usa o Kokoro local.
 Sem --all, só grava os arquivos que ainda não existem; --only=w- regrava os que começam com "w-". Precisa do ffmpeg instalado.
 Ao mudar palavras em index.html, mude aqui também.
 """
-import difflib, json, os, re, subprocess, sys, tempfile
+import difflib, io, json, os, re, subprocess, sys, tempfile, urllib.request
 import numpy as np
 import sherpa_onnx
 import soundfile as sf
@@ -145,10 +147,38 @@ def encode(samples, sr, dest):
                         "adelay=60,apad=pad_dur=0.15,loudnorm=I=-16:TP=-1.5",
                         "-ac", "1", "-ar", "24000", "-b:a", "64k", dest], check=True)
 
+# Voz neural da OpenAI (opcional): usada primeiro quando existe a variável OPENAI_API_KEY.
+# Precisa de acesso de rede a api.openai.com. As gravações passam pela mesma conferência.
+OPENAI_VOICES = ["coral", "nova", "shimmer", "sage"]
+OPENAI_STYLE = {
+    "en": "You are a warm, friendly teacher speaking to a four-year-old. Speak in clear, natural American English, "
+          "a little slowly, and say only the given words.",
+    "pt": "Você é uma professora carinhosa falando com uma criança de quatro anos. Fale em português do Brasil, "
+          "de forma clara, alegre e natural, e diga apenas as palavras dadas.",
+}
+
+def openai_tts(text, voice, lang):
+    req = urllib.request.Request(
+        "https://api.openai.com/v1/audio/speech",
+        data=json.dumps({"model": "gpt-4o-mini-tts", "voice": voice, "input": text,
+                         "instructions": OPENAI_STYLE[lang], "response_format": "wav"}).encode(),
+        headers={"Authorization": "Bearer " + os.environ["OPENAI_API_KEY"], "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        samples, sr = sf.read(io.BytesIO(r.read()), dtype="float32")
+    return samples, sr
+
 def takes(k, name, lang, text, speed):
     """Gera as tentativas de gravação de um áudio, da melhor para a pior."""
     kl = "en-us" if lang == "en" else "pt-br"
     voices = EN_VOICES if lang == "en" else PT_VOICES
+    if os.environ.get("OPENAI_API_KEY"):
+        for voice in OPENAI_VOICES:
+            try:
+                samples, sr = openai_tts(text, voice, lang)
+            except Exception as e:   # sem rede ou chave inválida: cai para a voz local
+                print("  OpenAI indisponível:", e, flush=True)
+                break
+            yield "openai:" + voice, text, samples, sr
     if name.startswith("w-"):
         bare = text.rstrip(".!?:")
         for voice in voices:
