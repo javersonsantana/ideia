@@ -11,8 +11,10 @@ Uso:  pip install kokoro-onnx soundfile sherpa-onnx
         sherpa-onnx-whisper-small
           (https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models)
       python3 tools/make_audio.py PASTA_DOS_MODELOS [--all] [--only=PREFIXO]
-Com a variável OPENAI_API_KEY definida (e rede liberada para api.openai.com), usa primeiro a voz
-neural da OpenAI, que é bem mais natural; sem ela, usa o Kokoro local.
+Vozes neurais, bem mais naturais, são usadas primeiro quando há credenciais no ambiente:
+  - Azure Speech: AZURE_SPEECH_KEY e AZURE_SPEECH_REGION (rede liberada para *.tts.speech.microsoft.com)
+  - OpenAI: OPENAI_API_KEY (rede liberada para api.openai.com)
+Sem nenhuma delas, usa o Kokoro local.
 Sem --all, só grava os arquivos que ainda não existem; --only=w- regrava os que começam com "w-". Precisa do ffmpeg instalado.
 Ao mudar palavras em index.html, mude aqui também.
 """
@@ -167,10 +169,41 @@ def openai_tts(text, voice, lang):
         samples, sr = sf.read(io.BytesIO(r.read()), dtype="float32")
     return samples, sr
 
+# Voz neural do Azure (opcional): usada primeiro quando existem AZURE_SPEECH_KEY e AZURE_SPEECH_REGION.
+# É o serviço "Speech" (Fala) do Azure, que tem camada gratuita. Precisa de acesso de rede a
+# <região>.tts.speech.microsoft.com. As gravações passam pela mesma conferência.
+AZURE_VOICES = {
+    "en": ["en-US-AvaNeural", "en-US-JennyNeural", "en-US-EmmaNeural", "en-US-AriaNeural"],
+    "pt": ["pt-BR-FranciscaNeural", "pt-BR-ThalitaNeural"],
+}
+
+def azure_tts(text, voice, lang, speed):
+    region = os.environ["AZURE_SPEECH_REGION"].strip().lower().replace(" ", "")
+    safe = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    ssml = (f"<speak version='1.0' xml:lang='{'en-US' if lang == 'en' else 'pt-BR'}'><voice name='{voice}'>"
+            f"<prosody rate='{round((speed - 1) * 100):+d}%'>{safe}</prosody></voice></speak>")
+    req = urllib.request.Request(
+        f"https://{region}.tts.speech.microsoft.com/cognitiveservices/v1", data=ssml.encode("utf-8"),
+        headers={"Ocp-Apim-Subscription-Key": os.environ["AZURE_SPEECH_KEY"].strip(),
+                 "Content-Type": "application/ssml+xml",
+                 "X-Microsoft-OutputFormat": "riff-24khz-16bit-mono-pcm",
+                 "User-Agent": "make-audio"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        samples, sr = sf.read(io.BytesIO(r.read()), dtype="float32")
+    return samples, sr
+
 def takes(k, name, lang, text, speed):
     """Gera as tentativas de gravação de um áudio, da melhor para a pior."""
     kl = "en-us" if lang == "en" else "pt-br"
     voices = EN_VOICES if lang == "en" else PT_VOICES
+    if os.environ.get("AZURE_SPEECH_KEY") and os.environ.get("AZURE_SPEECH_REGION"):
+        for voice in AZURE_VOICES[lang]:
+            try:
+                samples, sr = azure_tts(text, voice, lang, speed)
+            except Exception as e:   # sem rede, chave ou região erradas: cai para a próxima opção
+                print("  Azure indisponível:", e, flush=True)
+                break
+            yield "azure:" + voice, text, samples, sr
     if os.environ.get("OPENAI_API_KEY"):
         for voice in OPENAI_VOICES:
             try:

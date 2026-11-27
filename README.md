@@ -33,9 +33,11 @@ python3 -m http.server 8000
   então o som funciona em qualquer aparelho e sem internet.
 - **Voz do aparelho (opcional):** em "Para os pais", na tela inicial, dá para trocar a voz gravada das palavras
   em inglês pela voz do próprio aparelho, para comparar qual soa melhor.
-- **Voz mais natural (OpenAI):** com a variável de ambiente `OPENAI_API_KEY` e acesso de rede a
-  `api.openai.com`, `python3 tools/make_audio.py PASTA_DOS_MODELOS --all` regrava tudo com a voz neural da
-  OpenAI, conferindo cada áudio. Esse caminho ainda não foi testado com uma chave real.
+- **Voz mais natural (Azure ou OpenAI):** `tools/make_audio.py` usa uma voz neural quando encontra credenciais
+  no ambiente: `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION` (serviço Speech do Azure, com rede liberada para
+  `*.tts.speech.microsoft.com`) ou `OPENAI_API_KEY` (rede liberada para `api.openai.com`). Rode
+  `python3 tools/make_audio.py PASTA_DOS_MODELOS --all` para regravar tudo; cada áudio continua sendo
+  conferido. Esses dois caminhos ainda não foram testados com uma chave real.
 - **Estrelinhas:** cada acerto (falar a palavra ou achar a figura) vale uma estrelinha, com festa na tela,
   sininho e parabéns falado. O total aparece na tela inicial.
 - **Progresso guardado:** o app guarda no aparelho o total de estrelinhas, a nota de cada lição, os dias de
