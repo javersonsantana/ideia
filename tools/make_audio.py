@@ -1,8 +1,8 @@
 """Gera os áudios do app (pasta audio/) com o modelo de voz Kokoro e confere cada um.
 
 Cada gravação é "ouvida" por um reconhecedor de voz (Whisper). Se ele não entender exatamente
-a palavra, o script tenta outra voz ou outro texto, até acertar. Palavras soltas e faladas devagar
-são o ponto fraco do modelo: por isso ele grava em velocidade normal e só depois desacelera o som.
+a palavra, o script tenta outra voz ou outra frase, até acertar. Palavra solta é o ponto fraco do
+modelo (sai artificial), então cada palavra é gravada dentro de uma frase e depois recortada.
 
 Uso:  pip install kokoro-onnx soundfile sherpa-onnx
       numa pasta, baixe e extraia:
@@ -10,8 +10,8 @@ Uso:  pip install kokoro-onnx soundfile sherpa-onnx
           (https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0)
         sherpa-onnx-whisper-small
           (https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models)
-      python3 tools/make_audio.py PASTA_DOS_MODELOS [--all]
-Sem --all, só grava os arquivos que ainda não existem. Precisa do ffmpeg instalado.
+      python3 tools/make_audio.py PASTA_DOS_MODELOS [--all] [--only=PREFIXO]
+Sem --all, só grava os arquivos que ainda não existem; --only=w- regrava os que começam com "w-". Precisa do ffmpeg instalado.
 Ao mudar palavras em index.html, mude aqui também.
 """
 import difflib, json, os, re, subprocess, sys, tempfile
@@ -21,13 +21,13 @@ import soundfile as sf
 from kokoro_onnx import Kokoro
 
 EN_VOICES, PT_VOICES = ["af_heart", "af_bella", "af_nicole", "af_sarah", "af_sky", "af_kore", "am_michael", "am_adam"], ["pf_dora", "pm_alex"]
-WORD_TEMPO = 0.86   # palavras novas tocam um pouco mais devagar (sem mudar o tom da voz)
+WORD_SPEED = 0.9   # palavras e frases novas são faladas um pouco mais devagar
 
 WORDS = """dog cat fish bird cow lion red blue yellow green orange pink
 one two three four five six apple banana milk bread egg cheese
 ball car teddy-bear robot book kite eye ear nose mouth hand foot""".split()
 
-CLIPS = {f"w-{w}": ("en", w.replace("-", " ").capitalize() + ".", WORD_TEMPO) for w in WORDS}
+CLIPS = {f"w-{w}": ("en", w.replace("-", " ").capitalize() + ".", WORD_SPEED) for w in WORDS}
 CLIPS.update({
     "hello-bolt": ("en", "Hello! I am Bolt!", 1.0),
     "hello-luna": ("en", "Hello! I am Luna!", 1.0),
@@ -39,7 +39,7 @@ CLIPS.update({
     "toque": ("pt", "Toque em um desenho para brincar!", 1.0),
     "escute": ("pt", "Escute!", 1.0),
     "fala": ("pt", "Agora fala você!", 1.0),
-    "mic": ("pt", "Toque no microfone e fale!", 1.0),
+    "mic": ("pt", "Aperte o microfone, segure e fale!", 1.0),
     "cade": ("pt", "Cadê?", 1.0),
     "esse": ("pt", "Esse se chama", 1.0),
     "quase": ("pt", "Quase! Escute de novo.", 1.0),
@@ -83,7 +83,7 @@ PHRASES = {
     "f-cat": ("My cat is orange.", "Meu gato é laranja."),
 }
 for _id, (_en, _pt) in PHRASES.items():
-    CLIPS[_id] = ("en", _en, 0.9)
+    CLIPS[_id] = ("en", _en, WORD_SPEED)
     CLIPS["m-" + _id] = ("pt", "Quer dizer: " + _pt, 1.0)
 
 DIGITS = dict(zip("0123456789", "zero one two three four five six seven eight nine".split()))
@@ -109,17 +109,63 @@ class Ear:
         self.rec[lang].decode_stream(s)
         return s.result.text.strip()
 
-def encode(samples, sr, tempo, dest):
+# Uma palavra sozinha sai artificial. Dentro de uma frase a voz fica natural, então gravamos
+# a frase inteira e recortamos só o que vem depois da última pausa: a palavra.
+CARRIERS = ["Listen. {}.", "This one is called... {}.", "Now you say: {}."]
+
+def last_segment(x, sr, min_gap=0.14):
+    """Trecho depois da última pausa de pelo menos min_gap segundos, ou None se não houver pausa."""
+    win = int(sr * 0.01)
+    n = len(x) // win
+    e = np.sqrt((x[:n * win].reshape(n, win) ** 2).mean(axis=1))
+    quiet = e < max(0.01, e.max() * 0.03)
+    end = n
+    while end > 0 and quiet[end - 1]:
+        end -= 1
+    run = 0
+    for i in range(end - 1, -1, -1):
+        run = run + 1 if quiet[i] else 0
+        if run * 0.01 >= min_gap:
+            j = i
+            while j < end and quiet[j]:
+                j += 1
+            seg = x[max(0, (j - 4) * win):min(len(x), (end + 10) * win)].copy()
+            fade = int(sr * 0.008)
+            seg[:fade] *= np.linspace(0, 1, fade)
+            seg[-fade:] *= np.linspace(1, 0, fade)
+            return seg
+    return None
+
+def encode(samples, sr, dest):
     with tempfile.NamedTemporaryFile(suffix=".wav") as tmp:
         sf.write(tmp.name, samples, sr)
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", tmp.name, "-af",
-                        f"atempo={tempo},"
                         "silenceremove=start_periods=1:start_threshold=-50dB,areverse,"
                         "silenceremove=start_periods=1:start_threshold=-50dB,areverse,"
                         "adelay=60,apad=pad_dur=0.15,loudnorm=I=-16:TP=-1.5",
                         "-ac", "1", "-ar", "24000", "-b:a", "64k", dest], check=True)
 
-def main(models, redo):
+def takes(k, name, lang, text, speed):
+    """Gera as tentativas de gravação de um áudio, da melhor para a pior."""
+    kl = "en-us" if lang == "en" else "pt-br"
+    voices = EN_VOICES if lang == "en" else PT_VOICES
+    if name.startswith("w-"):
+        bare = text.rstrip(".!?:")
+        for voice in voices:
+            for carrier in CARRIERS:
+                samples, sr = k.create(carrier.format(bare), voice=voice, speed=speed, lang=kl)
+                seg = last_segment(samples, sr)
+                if seg is not None:
+                    yield voice, carrier.format(bare), seg, sr
+        for voice in voices:   # último recurso: a palavra sozinha
+            samples, sr = k.create(text, voice=voice, speed=1.0, lang=kl)
+            yield voice, text, samples, sr
+    else:
+        for voice in voices:
+            samples, sr = k.create(text, voice=voice, speed=speed, lang=kl)
+            yield voice, text, samples, sr
+
+def main(models, redo, only):
     out = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "audio")
     os.makedirs(out, exist_ok=True)
     k = Kokoro(os.path.join(models, "kokoro-v1.0.onnx"), os.path.join(models, "voices-v1.0.bin"))
@@ -130,36 +176,32 @@ def main(models, redo):
                     "-filter_complex", "[0][1]concat=n=2:v=0:a=1,afade=t=out:st=0.2:d=0.44,volume=0.5",
                     "-ac", "1", "-ar", "24000", "-b:a", "48k", os.path.join(out, "ding.mp3")], check=True)
     failed = []
-    for name, (lang, text, tempo) in CLIPS.items():
+    for name, (lang, text, speed) in CLIPS.items():
         dest = os.path.join(out, name + ".mp3")
-        if os.path.exists(dest) and not redo:
+        again = redo or any(name.startswith(p) for p in only)
+        if os.path.exists(dest) and not again:
             continue
-        want, word = norm(text), name.startswith("w-")
-        bare = text.rstrip(".!?:")
+        want, need = norm(text), (1.0 if name.startswith("w-") else 0.9)
         best = (-1, None)
-        for voice in (EN_VOICES if lang == "en" else PT_VOICES):
-            for variant in ([text, bare, bare + "!"] if word else [text]):
-                samples, sr = k.create(variant, voice=voice, speed=1.0, lang="en-us" if lang == "en" else "pt-br")
-                with tempfile.NamedTemporaryFile(suffix=".mp3") as tmp:
-                    encode(samples, sr, tempo, tmp.name)
-                    got = norm(ear.hear(tmp.name, lang))
-                    score = 1.0 if got == want or got in SAME_SOUND.get(want, ()) else min(0.99, difflib.SequenceMatcher(None, got, want).ratio())
-                    if score > best[0]:
-                        best = (score, (voice, variant, got, open(tmp.name, "rb").read()))
-                if best[0] >= (1.0 if word else 0.9):
-                    break
-            if best[0] >= (1.0 if word else 0.9):
+        for voice, said, samples, sr in takes(k, name, lang, text, speed):
+            with tempfile.NamedTemporaryFile(suffix=".mp3") as tmp:
+                encode(samples, sr, tmp.name)
+                got = norm(ear.hear(tmp.name, lang))
+                score = 1.0 if got == want or got in SAME_SOUND.get(want, ()) else min(0.99, difflib.SequenceMatcher(None, got, want).ratio())
+                if score > best[0]:
+                    best = (score, (voice, said, got, len(samples) / sr, open(tmp.name, "rb").read()))
+            if best[0] >= need:
                 break
-        score, (voice, variant, got, data) = best
+        score, (voice, said, got, secs, data) = best
         open(dest, "wb").write(data)
-        ok = score >= (1.0 if word else 0.9)
-        if not ok:
+        if score < need:
             failed.append(name)
-        print("OK  " if ok else "FALHOU", name, voice, repr(variant), "-> ouviu:", repr(got), flush=True)
+        print("OK  " if score >= need else "FALHOU", name, voice, repr(said), f"{secs:.2f}s", "-> ouviu:", repr(got), flush=True)
     with open(os.path.join(out, "index.json"), "w") as f:
         json.dump(sorted([*CLIPS, "ding"]), f)
     print("Conferir à mão:", failed if failed else "nada, todas passaram")
 
 if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    main(args[0] if args else ".", "--all" in sys.argv)
+    only = [a.split("=", 1)[1] for a in sys.argv[1:] if a.startswith("--only=")]
+    main(args[0] if args else ".", "--all" in sys.argv, only)

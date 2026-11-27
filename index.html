@@ -86,8 +86,8 @@ button:focus-visible,summary:focus-visible{outline:4px solid var(--blue);outline
 .choice .pic{font-size:5rem}.choice .pic.sw{width:104px;height:104px}.choice .pic.num{font-size:4.4rem}
 .ok{background:var(--leaf)!important;animation:pop .5s}
 .bad{opacity:.3;animation:shake .35s}
-.btn.mic{--c:var(--coral);min-width:84px;min-height:84px;font-size:2.6rem}
-.btn.mic.on{animation:pulse .5s ease-in-out infinite alternate}
+.btn.mic{--c:var(--coral);min-width:96px;min-height:96px;font-size:3rem;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.btn.mic.on{animation:pulse .5s ease-in-out infinite alternate;box-shadow:0 0 0 10px color-mix(in srgb,var(--coral) 35%,transparent),0 6px 0 var(--line)}
 .count{font:800 1.25rem var(--display);background:var(--surface);border:3px solid var(--line);border-radius:999px;padding:6px 12px;white-space:nowrap}
 .count.bump{animation:pop .5s}
 .card{position:relative}
@@ -211,19 +211,33 @@ const player = new Audio(); player.preload = 'auto';
 let playId = 0;
 const wid = w => w[2] || 'w-' + w[0].replace(/ /g, '-');
 // say('yes', 'w-dog', 'p1') toca as gravações em sequência.
+// Texto em inglês de cada áudio, para quando os pais escolhem a voz do próprio aparelho.
+const EN_TEXT = {};
+UNITS.forEach(u => u.words.forEach(w => { EN_TEXT[wid(w)] = w[0]; }));
+const canDevice = 'speechSynthesis' in window;
+const deviceVoice = () => store.voice === 'device' && canDevice;
 function say(...ids) {
   const my = ++playId; let i = 0;
+  if (canDevice) { try { speechSynthesis.cancel(); } catch (e) {} }
   const end = () => { if (my === playId) talking(false); };
   const next = () => {
     if (my !== playId) return;
     if (i >= ids.length) return end();
-    player.src = 'audio/' + ids[i++] + '.mp3';
+    const id = ids[i++];
+    if (deviceVoice() && EN_TEXT[id]) {
+      try {
+        const u = new SpeechSynthesisUtterance(EN_TEXT[id]);
+        u.lang = 'en-US'; u.rate = 0.85; u.onend = u.onerror = next;
+        speechSynthesis.speak(u); return;
+      } catch (e) {}
+    }
+    player.src = 'audio/' + id + '.mp3';
     player.onended = next; player.onerror = next;
     const p = player.play(); if (p) p.catch(end);
   };
   talking(true); next();
 }
-function hush() { playId++; try { player.pause(); } catch (e) {} talking(false); }
+function hush() { playId++; try { player.pause(); if (canDevice) speechSynthesis.cancel(); } catch (e) {} talking(false); }
 const talking = on => { const a = document.querySelector('.avatar'); if (a) a.classList.toggle('talking', on); };
 
 /* ---------- Microfone: confere se a criança falou a palavra ---------- */
@@ -245,7 +259,7 @@ const heard = (text, word) => {
 };
 // Chame direto do toque no botão. done(true|false) = falou certo ou não; done(null) = microfone indisponível.
 function listen(w, done) {
-  let text = '', finished = false, stop = () => {};
+  let text = '', finished = false, stop = () => {}, release = () => {};
   const finish = r => { if (finished) return; finished = true; clearTimeout(t); stop(); done(r); };
   const check = () => { if (heardAll(text, w)) finish(true); };
   const t = setTimeout(() => finish(false), w[3] ? 8000 : 6000);
@@ -253,6 +267,7 @@ function listen(w, done) {
     let final = '';
     const offs = [dict.onPartial(e => { text = final + ' ' + e.text; check(); }), dict.onFinal(e => { final += e.text; text = final; check(); })];
     stop = () => { offs.forEach(f => f()); dict.stop().catch(() => {}); };
+    release = () => { const s = dict.stop(); stop = () => { offs.forEach(f => f()); }; s.then(() => finish(heardAll(text, w)), () => finish(heardAll(text, w))); };
     dict.start({ language: 'en' }).catch(e => {
       if (e && (e.code === 'not_granted' || e.code === 'unavailable')) micOff = true;
       finish(e && e.code === 'stopped' ? false : null);
@@ -266,9 +281,11 @@ function listen(w, done) {
       r.onend = () => finish(heardAll(text, w));
       stop = () => { try { r.abort(); } catch (e) {} };
       r.start();
+      // soltou o botão: pede o resultado final e confere
+      release = () => { try { r.stop(); } catch (e) {} setTimeout(() => finish(heardAll(text, w)), 1500); };
     } catch (e) { micOff = true; finish(null); }
   }
-  return () => finish(false);
+  return { cancel: () => finish(false), release: () => { if (!finished) release(); } };
 }
 
 /* ---------- Utilidades ---------- */
@@ -340,11 +357,15 @@ function home() {
       Cada lição leva uns 5 minutos e ensina 6 palavras ou 6 frases do dia a dia, 3 de cada vez. Uma lição por dia é o bastante; repetir a mesma lição
       em dias seguidos ajuda muito nessa idade. Sente junto e repita as palavras em voz alta com a criança.</p>
       <p class="muted">Cada acerto vale uma estrelinha ⭐ com festa e parabéns. ${canListen()
-        ? 'Depois de ouvir a palavra, a criança toca no 🎤 e repete. O app mostra ✅ se ouviu a palavra certa, ou 🔁 para tentar de novo, e só avança quando ela acerta. O reconhecimento de voz pode errar com crianças pequenas: depois de 5 tentativas aparece um link pequeno para o adulto pular a palavra, sem estrelinha.'
+        ? 'Depois de ouvir a palavra, a criança aperta o 🎤, segura, fala e solta. O app mostra ✅ se ouviu a palavra certa, ou 🔁 para tentar de novo, e só avança quando ela acerta. O reconhecimento de voz pode errar com crianças pequenas: depois de 5 tentativas aparece um link pequeno para o adulto pular a palavra, sem estrelinha.'
         : 'Aqui o app não consegue usar o microfone, então não confere a fala: a criança só repete em voz alta, e as estrelinhas vêm de achar a figura certa. Para o app ouvir e dizer se ela falou certo, abra no navegador Chrome (computador ou Android) e permita o microfone.'}</p>
+  ${canDevice ? `<p class="muted">Voz das palavras em inglês: <b>${deviceVoice() ? 'a do aparelho' : 'a gravada no app'}</b>.
+        Se a pronúncia de uma delas parecer ruim, experimente a outra e compare.
+        <button class="danger" id="voice">Trocar para a voz ${deviceVoice() ? 'gravada no app' : 'do aparelho'}</button></p>` : ''}
     </details>`);
   $('hear').onclick = () => say('lets-play', 'toque');
   $('album').onclick = album;
+  if ($('voice')) $('voice').onclick = () => { store.voice = deviceVoice() ? 'app' : 'device'; save(); home(); document.querySelector('details').open = true; say('w-green', 'w-pink'); };
   app.querySelectorAll('.tile').forEach(b => b.onclick = () => lesson(UNITS.find(u => u.id === b.dataset.u)));
 }
 
@@ -441,11 +462,13 @@ function lesson(u) {
         // Com microfone a criança só avança quando o app ouve a palavra certa.
         let tries = 0, busy = false;
         $('skip').onclick = next;
-        $('mic').onclick = () => {
+        const m = $('mic');
+        let ctl = null, downAt = 0;
+        const begin = () => {
           if (busy || done) return;
-          busy = true; hush(); $('badge').hidden = true; $('mic').classList.add('on'); live.textContent = 'Ouvindo';
-          cancelListen = listen(w, ok => {
-            cancelListen = null; busy = false;
+          busy = true; downAt = Date.now(); hush(); $('badge').hidden = true; m.classList.add('on'); live.textContent = 'Ouvindo';
+          ctl = listen(w, ok => {
+            cancelListen = null; ctl = null; busy = false;
             const m = $('mic'); if (!m) return;
             m.classList.remove('on');
             if (ok === null) { micOff = true; return step(); }   // microfone indisponível: volta no modo sem conferência
@@ -454,7 +477,18 @@ function lesson(u) {
             say('quase', id, id);
             if (++tries >= 5) $('skip').hidden = false;   // saída só para o adulto, caso o reconhecimento não entenda a criança
           });
+          if (ctl) cancelListen = ctl.cancel;
         };
+        // Apertar e segurar: ouve enquanto o dedo está no botão e confere ao soltar.
+        // Um toque rápido também funciona: aí o app ouve por alguns segundos.
+        const letGo = () => { if (busy && ctl && Date.now() - downAt >= 500) ctl.release(); };
+        if (dict) m.onclick = begin;   // neste modo o início precisa ser um clique
+        else {
+          m.onpointerdown = e => { e.preventDefault(); try { m.setPointerCapture(e.pointerId); } catch (x) {} begin(); };
+          m.onpointerup = m.onpointercancel = letGo;
+          m.oncontextmenu = e => e.preventDefault();
+          m.onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); begin(); } };
+        }
       }
     } else {
       const w = s.find, id = wid(w);
